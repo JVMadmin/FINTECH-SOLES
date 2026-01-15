@@ -105,13 +105,42 @@ export default function CreditDetailPage() {
   };
 
   const handleActivate = async () => {
+    if (!evidenciaDesembolso) {
+      toast.error("Debe subir una foto de evidencia del desembolso");
+      return;
+    }
+    
     try {
-      await axios.post(`${API}/credits/${id}/activate`);
+      await axios.post(`${API}/credits/${id}/activate`, {
+        evidencia_desembolso: evidenciaDesembolso
+      });
       toast.success("Crédito activado - Desembolso confirmado");
       setShowActivateDialog(false);
+      setEvidenciaDesembolso("");
       fetchCredit();
     } catch (error) {
       toast.error(error.response?.data?.detail || "Error al activar");
+    }
+  };
+
+  const handleFileUpload = async (e) => {
+    const file = e.target.files[0];
+    if (!file) return;
+
+    setIsUploading(true);
+    const formData = new FormData();
+    formData.append("file", file);
+
+    try {
+      const response = await axios.post(`${API}/upload`, formData, {
+        headers: { "Content-Type": "multipart/form-data" },
+      });
+      setEvidenciaDesembolso(response.data.url);
+      toast.success("Foto subida correctamente");
+    } catch (error) {
+      toast.error("Error al subir foto");
+    } finally {
+      setIsUploading(false);
     }
   };
 
