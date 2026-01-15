@@ -164,6 +164,13 @@ class PaymentCreate(BaseModel):
     metodo_pago: str = "efectivo"
     notas: Optional[str] = None
 
+class NoPaymentCreate(BaseModel):
+    credito_id: str
+    motivo: str  # no_pago, no_localizado, promesa_pago, otro
+    descripcion: Optional[str] = None
+    evidencia_url: Optional[str] = None  # Foto de evidencia de intento de contacto
+    fecha_promesa: Optional[str] = None  # Si es promesa de pago
+
 class PaymentResponse(BaseModel):
     model_config = ConfigDict(extra="ignore")
     id: str
@@ -176,6 +183,22 @@ class PaymentResponse(BaseModel):
     notas: Optional[str] = None
     registrado_por: str
     region: str
+
+class NoPaymentResponse(BaseModel):
+    model_config = ConfigDict(extra="ignore")
+    id: str
+    credito_id: str
+    cliente_id: str
+    cliente_nombre: Optional[str] = None
+    motivo: str
+    descripcion: Optional[str] = None
+    evidencia_url: Optional[str] = None
+    fecha_registro: str
+    registrado_por: str
+    fecha_promesa: Optional[str] = None
+
+class ActivateCreditRequest(BaseModel):
+    evidencia_desembolso: str  # URL de la foto del desembolso
 
 class CashBoxCreate(BaseModel):
     notas: Optional[str] = None
