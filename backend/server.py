@@ -1393,11 +1393,22 @@ async def upload_file(file: UploadFile = File(...), user: dict = Depends(get_cur
 async def get_dashboard_stats(user: dict = Depends(get_current_user)):
     """Obtener estadísticas para el dashboard"""
     query = {}
+    payment_query = {}
+    is_regional = False
     
     if user["rol"] == "asesor":
+        # Cartera personal del asesor
         query["asesor_id"] = user["sub"]
-    elif user["rol"] in ["supervisor", "gerente_regional"]:
+        payment_query["registrado_por"] = user["sub"]
+    elif user["rol"] == "supervisor":
+        # Cartera regional - todos los clientes/créditos de su región
         query["region"] = user["region"]
+        payment_query["region"] = user["region"]
+        is_regional = True
+    elif user["rol"] == "gerente_regional":
+        query["region"] = user["region"]
+        payment_query["region"] = user["region"]
+        is_regional = True
     
     # Contar clientes
     total_clientes = await db.clients.count_documents(query if query else {})
@@ -1421,18 +1432,21 @@ async def get_dashboard_stats(user: dict = Depends(get_current_user)):
     today_start = datetime.strptime(today, "%Y-%m-%d").replace(tzinfo=timezone.utc)
     today_end = today_start + timedelta(days=1)
     
-    payment_query = {}
-    if user["rol"] == "asesor":
-        payment_query["registrado_por"] = user["sub"]
-    elif user["rol"] in ["supervisor", "gerente_regional"]:
-        payment_query["region"] = user["region"]
-    
     today_payments = await db.payments.find({
         **payment_query,
         "fecha_pago": {"$gte": today_start.isoformat(), "$lt": today_end.isoformat()}
     }, {"_id": 0}).to_list(1000)
     
     cobro_hoy = sum(p["monto"] for p in today_payments)
+    
+    # Si es supervisor, obtener info de asesores
+    asesores_count = 0
+    if user["rol"] == "supervisor":
+        asesores_count = await db.users.count_documents({
+            "supervisor_id": user["sub"],
+            "rol": "asesor",
+            "activo": True
+        })
     
     return {
         "total_clientes": total_clientes,
@@ -1444,7 +1458,72 @@ async def get_dashboard_stats(user: dict = Depends(get_current_user)):
         "monto_total_otorgado": monto_total_otorgado,
         "saldo_pendiente": saldo_pendiente,
         "cobro_hoy": cobro_hoy,
-        "pagos_hoy": len(today_payments)
+        "pagos_hoy": len(today_payments),
+        "tipo_cartera": "regional" if is_regional else "personal",
+        "asesores_count": asesores_count,
+        "region": user.get("region")
+    }
+
+@api_router.get("/stats/cartera-regional")
+async def get_cartera_regional(user: dict = Depends(get_current_user)):
+    """Obtener estadísticas de cartera regional para supervisores"""
+    check_role(user, ["desarrollador", "administrador", "gerente_regional", "supervisor"])
+    
+    region = user.get("region")
+    if not region and user["rol"] not in ["desarrollador", "administrador"]:
+        raise HTTPException(status_code=400, detail="Usuario sin región asignada")
+    
+    # Obtener asesores de la región
+    asesor_query = {"rol": "asesor", "activo": True}
+    if user["rol"] == "supervisor":
+        asesor_query["supervisor_id"] = user["sub"]
+    elif region:
+        asesor_query["region"] = region
+    
+    asesores = await db.users.find(asesor_query, {"_id": 0, "password": 0}).to_list(100)
+    
+    # Estadísticas por asesor
+    asesores_stats = []
+    total_regional = {
+        "clientes": 0,
+        "creditos_vigentes": 0,
+        "saldo_pendiente": 0,
+        "cobro_hoy": 0
+    }
+    
+    today = datetime.now(timezone.utc).strftime("%Y-%m-%d")
+    today_start = datetime.strptime(today, "%Y-%m-%d").replace(tzinfo=timezone.utc)
+    today_end = today_start + timedelta(days=1)
+    
+    for asesor in asesores:
+        clientes = await db.clients.count_documents({"asesor_id": asesor["id"]})
+        creditos = await db.credits.find({"asesor_id": asesor["id"], "estatus": {"$in": ["vigente", "atrasado"]}}, {"_id": 0}).to_list(1000)
+        saldo = sum(c.get("saldo_pendiente", 0) for c in creditos)
+        
+        pagos_hoy = await db.payments.find({
+            "registrado_por": asesor["id"],
+            "fecha_pago": {"$gte": today_start.isoformat(), "$lt": today_end.isoformat()}
+        }, {"_id": 0}).to_list(1000)
+        cobro = sum(p["monto"] for p in pagos_hoy)
+        
+        asesores_stats.append({
+            "id": asesor["id"],
+            "nombre": asesor["nombre_completo"],
+            "clientes": clientes,
+            "creditos_activos": len(creditos),
+            "saldo_pendiente": saldo,
+            "cobro_hoy": cobro
+        })
+        
+        total_regional["clientes"] += clientes
+        total_regional["creditos_vigentes"] += len(creditos)
+        total_regional["saldo_pendiente"] += saldo
+        total_regional["cobro_hoy"] += cobro
+    
+    return {
+        "region": region,
+        "asesores": asesores_stats,
+        "totales": total_regional
     }
 
 # ============== LOGS ROUTES ==============
