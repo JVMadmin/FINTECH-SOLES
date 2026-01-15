@@ -62,6 +62,9 @@ export default function CreditDetailPage() {
   const [showAuthorizeDialog, setShowAuthorizeDialog] = useState(false);
   const [showRejectDialog, setShowRejectDialog] = useState(false);
   const [showActivateDialog, setShowActivateDialog] = useState(false);
+  const [evidenciaDesembolso, setEvidenciaDesembolso] = useState("");
+  const [isUploading, setIsUploading] = useState(false);
+  const fileInputRef = useRef(null);
 
   useEffect(() => {
     fetchCredit();
