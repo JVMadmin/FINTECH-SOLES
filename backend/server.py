@@ -963,6 +963,91 @@ async def get_payments(
     payments = await db.payments.find(query, {"_id": 0}).to_list(1000)
     return [PaymentResponse(**p) for p in payments]
 
+# ============== NO PAYMENT (INCIDENCIAS) ROUTES ==============
+@api_router.post("/no-payments", response_model=NoPaymentResponse)
+async def register_no_payment(data: NoPaymentCreate, user: dict = Depends(get_current_user)):
+    """Registrar incidencia de no pago - Asesor"""
+    check_role(user, ["desarrollador", "administrador", "asesor"])
+    
+    if data.motivo not in NO_PAYMENT_REASONS:
+        raise HTTPException(status_code=400, detail=f"Motivo inválido. Opciones: {NO_PAYMENT_REASONS}")
+    
+    credit = await db.credits.find_one({"id": data.credito_id}, {"_id": 0})
+    if not credit:
+        raise HTTPException(status_code=404, detail="Crédito no encontrado")
+    
+    if credit["estatus"] not in ["vigente", "atrasado"]:
+        raise HTTPException(status_code=400, detail="Solo se pueden registrar incidencias en créditos vigentes o atrasados")
+    
+    # Verificar acceso del asesor
+    if user["rol"] == "asesor" and credit.get("asesor_id") != user["sub"]:
+        raise HTTPException(status_code=403, detail="No tiene acceso a este crédito")
+    
+    # Crear registro de no pago
+    no_payment_dict = {
+        "id": str(uuid.uuid4()),
+        "credito_id": data.credito_id,
+        "cliente_id": credit["cliente_id"],
+        "cliente_nombre": credit["cliente_nombre"],
+        "motivo": data.motivo,
+        "descripcion": data.descripcion,
+        "evidencia_url": data.evidencia_url,
+        "fecha_registro": datetime.now(timezone.utc).isoformat(),
+        "registrado_por": user["sub"],
+        "registrado_por_nombre": user["nombre"],
+        "region": credit["region"],
+        "fecha_promesa": data.fecha_promesa
+    }
+    
+    await db.no_payments.insert_one(no_payment_dict)
+    
+    # Actualizar estatus del crédito si está atrasado
+    # Buscar el próximo pago pendiente
+    calendario = credit.get("calendario_pagos", [])
+    today = datetime.now(timezone.utc).strftime("%Y-%m-%d")
+    
+    for pago in calendario:
+        if not pago["pagado"] and pago["fecha"] <= today:
+            # Hay pagos atrasados
+            if credit["estatus"] != "atrasado":
+                await db.credits.update_one(
+                    {"id": data.credito_id},
+                    {"$set": {"estatus": "atrasado"}}
+                )
+                # Actualizar cliente también
+                await db.clients.update_one(
+                    {"id": credit["cliente_id"]},
+                    {"$set": {"estatus": "atrasado"}}
+                )
+            break
+    
+    await log_action(user["sub"], user["nombre"], "registrar_no_pago", "no_pago", no_payment_dict["id"],
+                    {"credito": data.credito_id, "motivo": data.motivo, "cliente": credit["cliente_nombre"]})
+    
+    return NoPaymentResponse(**no_payment_dict)
+
+@api_router.get("/no-payments")
+async def get_no_payments(
+    credito_id: Optional[str] = None,
+    cliente_id: Optional[str] = None,
+    user: dict = Depends(get_current_user)
+):
+    """Obtener historial de incidencias de no pago"""
+    query = {}
+    
+    if user["rol"] == "asesor":
+        query["registrado_por"] = user["sub"]
+    elif user["rol"] in ["supervisor", "gerente_regional"]:
+        query["region"] = user["region"]
+    
+    if credito_id:
+        query["credito_id"] = credito_id
+    if cliente_id:
+        query["cliente_id"] = cliente_id
+    
+    no_payments = await db.no_payments.find(query, {"_id": 0}).sort("fecha_registro", -1).to_list(500)
+    return no_payments
+
 # ============== ALERTS ROUTES ==============
 @api_router.get("/alerts", response_model=List[AlertResponse])
 async def get_alerts(user: dict = Depends(get_current_user)):
