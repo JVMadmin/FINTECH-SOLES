@@ -90,6 +90,12 @@ const MainLayout = ({ children }) => {
       path: "/logs",
       roles: ["desarrollador", "administrador"],
     },
+    {
+      label: "Asignaciones",
+      icon: MapPin,
+      path: "/asignaciones",
+      roles: ["desarrollador", "administrador", "gerente_regional", "supervisor"],
+    },
   ];
 
   const filteredNavItems = navItems.filter((item) => hasRole(item.roles));

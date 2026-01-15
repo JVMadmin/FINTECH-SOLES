@@ -163,6 +163,21 @@ function AppRoutes() {
           </ProtectedRoute>
         }
       />
+      <Route
+        path="/asignaciones"
+        element={
+          <ProtectedRoute
+            allowedRoles={[
+              "desarrollador",
+              "administrador",
+              "gerente_regional",
+              "supervisor",
+            ]}
+          >
+            <AsignacionesPage />
+          </ProtectedRoute>
+        }
+      />
       <Route path="/" element={<Navigate to="/dashboard" replace />} />
       <Route path="*" element={<Navigate to="/dashboard" replace />} />
     </Routes>
