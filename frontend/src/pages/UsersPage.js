@@ -286,12 +286,12 @@ export default function UsersPage() {
                 data-testid="search-users"
               />
             </div>
-            <Select value={filterRole} onValueChange={setFilterRole}>
+            <Select value={filterRole || "all"} onValueChange={(v) => setFilterRole(v === "all" ? "" : v)}>
               <SelectTrigger className="w-full md:w-48">
                 <SelectValue placeholder="Todos los roles" />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="">Todos los roles</SelectItem>
+                <SelectItem value="all">Todos los roles</SelectItem>
                 {ROLES.map((role) => (
                   <SelectItem key={role.value} value={role.value}>
                     {role.label}

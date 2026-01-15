@@ -358,12 +358,12 @@ export default function CreditsPage() {
               />
             </div>
 
-            <Select value={filterEstatus} onValueChange={setFilterEstatus}>
+            <Select value={filterEstatus || "all"} onValueChange={(v) => setFilterEstatus(v === "all" ? "" : v)}>
               <SelectTrigger className="w-full md:w-48" data-testid="filter-status">
                 <SelectValue placeholder="Todos los estatus" />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="">Todos</SelectItem>
+                <SelectItem value="all">Todos</SelectItem>
                 <SelectItem value="pendiente">Pendiente</SelectItem>
                 <SelectItem value="autorizado">Autorizado</SelectItem>
                 <SelectItem value="vigente">Vigente</SelectItem>
@@ -373,12 +373,12 @@ export default function CreditsPage() {
               </SelectContent>
             </Select>
 
-            <Select value={filterTipo} onValueChange={setFilterTipo}>
+            <Select value={filterTipo || "all"} onValueChange={(v) => setFilterTipo(v === "all" ? "" : v)}>
               <SelectTrigger className="w-full md:w-40" data-testid="filter-type">
                 <SelectValue placeholder="Todos los tipos" />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="">Todos</SelectItem>
+                <SelectItem value="all">Todos</SelectItem>
                 {CREDIT_TYPES.map((type) => (
                   <SelectItem key={type.value} value={type.value}>
                     {type.label.split(" ")[0]}

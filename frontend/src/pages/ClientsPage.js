@@ -236,12 +236,12 @@ export default function ClientsPage() {
             </div>
             
             {!hasRole(["asesor", "supervisor", "gerente_regional"]) && (
-              <Select value={filterRegion} onValueChange={setFilterRegion}>
+              <Select value={filterRegion || "all"} onValueChange={(v) => setFilterRegion(v === "all" ? "" : v)}>
                 <SelectTrigger className="w-full md:w-48" data-testid="filter-region">
                   <SelectValue placeholder="Todas las regiones" />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="">Todas las regiones</SelectItem>
+                  <SelectItem value="all">Todas las regiones</SelectItem>
                   {REGIONS.map((region) => (
                     <SelectItem key={region} value={region}>
                       {region.charAt(0).toUpperCase() + region.slice(1)}
@@ -251,12 +251,12 @@ export default function ClientsPage() {
               </Select>
             )}
 
-            <Select value={filterEstatus} onValueChange={setFilterEstatus}>
+            <Select value={filterEstatus || "all"} onValueChange={(v) => setFilterEstatus(v === "all" ? "" : v)}>
               <SelectTrigger className="w-full md:w-40" data-testid="filter-status">
                 <SelectValue placeholder="Todos los estatus" />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="">Todos</SelectItem>
+                <SelectItem value="all">Todos</SelectItem>
                 <SelectItem value="vigente">Vigente</SelectItem>
                 <SelectItem value="atrasado">Atrasado</SelectItem>
                 <SelectItem value="vencido">Vencido</SelectItem>

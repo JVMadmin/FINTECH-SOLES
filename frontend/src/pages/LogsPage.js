@@ -125,12 +125,13 @@ export default function LogsPage() {
                 data-testid="search-logs"
               />
             </div>
-            <Select value={filterEntity} onValueChange={setFilterEntity}>
+            <Select value={filterEntity || "all"} onValueChange={(v) => setFilterEntity(v === "all" ? "" : v)}>
               <SelectTrigger className="w-full md:w-48">
                 <SelectValue placeholder="Todas las entidades" />
               </SelectTrigger>
               <SelectContent>
-                {ENTITIES.map((entity) => (
+                <SelectItem value="all">Todas las entidades</SelectItem>
+                {ENTITIES.filter(e => e.value).map((entity) => (
                   <SelectItem key={entity.value} value={entity.value}>
                     {entity.label}
                   </SelectItem>
