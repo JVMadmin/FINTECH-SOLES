@@ -800,8 +800,8 @@ async def reject_credit(credit_id: str, motivo: str = "Sin especificar", user: d
 
 @api_router.post("/credits/{credit_id}/activate")
 async def activate_credit(credit_id: str, user: dict = Depends(get_current_user)):
-    """Activar crédito después de desembolso"""
-    check_role(user, ["desarrollador", "gerente_regional"])
+    """Activar crédito después de desembolso - Gerente Regional y Supervisor"""
+    check_role(user, ["desarrollador", "gerente_regional", "supervisor"])
     
     credit = await db.credits.find_one({"id": credit_id}, {"_id": 0})
     if not credit:
