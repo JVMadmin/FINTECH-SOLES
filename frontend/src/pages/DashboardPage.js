@@ -26,6 +26,7 @@ export default function DashboardPage() {
   const { user, hasRole } = useAuth();
   const [stats, setStats] = useState(null);
   const [alerts, setAlerts] = useState([]);
+  const [carteraRegional, setCarteraRegional] = useState(null);
   const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
@@ -40,6 +41,16 @@ export default function DashboardPage() {
       ]);
       setStats(statsRes.data);
       setAlerts(alertsRes.data);
+      
+      // Si es supervisor, cargar cartera regional
+      if (user?.rol === "supervisor") {
+        try {
+          const carteraRes = await axios.get(`${API}/stats/cartera-regional`);
+          setCarteraRegional(carteraRes.data);
+        } catch (e) {
+          console.error("Error loading regional data:", e);
+        }
+      }
     } catch (error) {
       toast.error("Error al cargar datos del dashboard");
     } finally {
