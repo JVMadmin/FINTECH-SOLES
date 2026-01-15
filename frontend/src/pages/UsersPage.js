@@ -51,7 +51,15 @@ const ROLES = [
   { value: "asesor", label: "Asesor de Crédito", color: "bg-gray-100 text-gray-800" },
 ];
 
-const REGIONS = ["yajalon", "chilon", "bachajon", "temo", "petalcingo", "tumbala", "tila"];
+const REGIONS = [
+  { id: "yajalon", nombre: "Yajalón (Sede Regional #3)", tipo: "sede" },
+  { id: "chilon", nombre: "Chilón", tipo: "comunidad" },
+  { id: "bachajon", nombre: "Bachajón", tipo: "comunidad" },
+  { id: "temo", nombre: "Temo", tipo: "comunidad" },
+  { id: "petalcingo", nombre: "Petalcingo", tipo: "comunidad" },
+  { id: "tumbala", nombre: "Tumbalá", tipo: "comunidad" },
+  { id: "tila", nombre: "Tila", tipo: "comunidad" },
+];
 
 export default function UsersPage() {
   const { user, hasRole } = useAuth();
