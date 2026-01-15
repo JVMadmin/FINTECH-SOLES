@@ -1,0 +1,152 @@
+{
+  "typography": {
+    "font_family": {
+      "heading": "Barlow Condensed, sans-serif",
+      "body": "Inter, sans-serif",
+      "mono": "JetBrains Mono, monospace"
+    },
+    "imports": [
+      "@import url('https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@400;500;600;700&family=Inter:wght@400;500;600&display=swap');"
+    ],
+    "scale": {
+      "h1": "text-4xl md:text-5xl font-bold tracking-tight uppercase",
+      "h2": "text-3xl md:text-4xl font-semibold tracking-tight uppercase",
+      "h3": "text-2xl md:text-3xl font-semibold",
+      "body_lg": "text-lg leading-relaxed",
+      "body_base": "text-base leading-relaxed",
+      "caption": "text-sm text-muted-foreground uppercase tracking-wider"
+    }
+  },
+  "colors": {
+    "palette": {
+      "primary": {
+        "DEFAULT": "#CA8A04",
+        "foreground": "#FFFFFF",
+        "hover": "#A16207",
+        "light": "#FEF08A"
+      },
+      "background": {
+        "DEFAULT": "#F3F4F6",
+        "paper": "#FFFFFF",
+        "dark": "#1F2937"
+      },
+      "status": {
+        "vigente": "#16A34A",
+        "atrasado": "#EAB308",
+        "vencido": "#DC2626",
+        "neutral": "#6B7280"
+      },
+      "text": {
+        "primary": "#111827",
+        "secondary": "#4B5563",
+        "muted": "#9CA3AF"
+      }
+    },
+    "tailwind_config": {
+      "extend": {
+        "colors": {
+          "brand": {
+            "gold": "#CA8A04",
+            "yellow": "#EAB308",
+            "dark": "#1F2937"
+          },
+          "status": {
+            "green": "#16A34A",
+            "yellow": "#EAB308",
+            "red": "#DC2626"
+          }
+        }
+      }
+    }
+  },
+  "visual_enhancers": {
+    "shadows": {
+      "card": "0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06)",
+      "floating": "0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05)",
+      "inner": "inset 0 2px 4px 0 rgba(0, 0, 0, 0.06)"
+    },
+    "borders": {
+      "radius": "0.5rem",
+      "width": "1px",
+      "color": "border-gray-200"
+    },
+    "textures": {
+      "noise": "url(\"data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noiseFilter'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.65' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noiseFilter)' opacity='0.05'/%3E%3C/svg%3E\")"
+    }
+  },
+  "components": {
+    "buttons": {
+      "primary": "bg-brand-gold hover:bg-brand-gold/90 text-white font-bold uppercase tracking-wide h-12 px-6 rounded-lg shadow-md transition-transform active:scale-95",
+      "secondary": "bg-white border-2 border-gray-200 text-gray-700 hover:bg-gray-50 font-semibold h-12 px-6 rounded-lg",
+      "destructive": "bg-status-red hover:bg-status-red/90 text-white font-bold h-12 px-6 rounded-lg",
+      "mobile_action": "w-full h-14 text-lg font-bold shadow-lg"
+    },
+    "cards": {
+      "base": "bg-white rounded-xl border border-gray-200 shadow-sm p-4 md:p-6",
+      "interactive": "bg-white rounded-xl border border-gray-200 shadow-sm p-4 hover:shadow-md hover:border-brand-gold/50 transition-all cursor-pointer",
+      "status_indicator": "absolute top-4 right-4 w-3 h-3 rounded-full"
+    },
+    "inputs": {
+      "base": "h-12 bg-gray-50 border-gray-300 focus:border-brand-gold focus:ring-brand-gold rounded-lg text-lg"
+    }
+  },
+  "layout": {
+    "grid_system": {
+      "mobile": "grid-cols-1 gap-4",
+      "tablet": "grid-cols-2 gap-6",
+      "desktop": "grid-cols-3 lg:grid-cols-4 gap-8"
+    },
+    "spacing": {
+      "section": "py-8 md:py-12",
+      "container": "px-4 md:px-8 max-w-7xl mx-auto"
+    }
+  },
+  "image_urls": {
+    "login_background": {
+      "url": "https://images.unsplash.com/photo-1758518727707-b023e285b709?crop=entropy&cs=srgb&fm=jpg&ixid=M3w4NTYxODF8MHwxfHNlYXJjaHwxfHxmaW5hbmNlJTIwdGVhbSUyMG1lZXRpbmclMjBwcm9mZXNzaW9uYWwlMjBvZmZpY2V8ZW58MHx8fHwxNzY4NTA2NDYyfDA&ixlib=rb-4.1.0&q=85",
+      "description": "Professional finance team meeting, suitable for login page background with overlay",
+      "category": "background"
+    },
+    "map_placeholder": {
+      "url": "https://images.unsplash.com/photo-1767873691315-c9e61c705b25?crop=entropy&cs=srgb&fm=jpg&ixid=M3w3NTY2NzR8MHwxfHNlYXJjaHwyfHx1cmJhbiUyMGNpdHklMjBtYXAlMjBuYXZpZ2F0aW9uJTIwdGVjaG5vbG9neXxlbnwwfHx8fDE3Njg1MDY0NjN8MA&ixlib=rb-4.1.0&q=85",
+      "description": "GPS Navigation screen, placeholder for map view",
+      "category": "ui_element"
+    },
+    "logo": {
+      "url": "https://customer-assets.emergentagent.com/job_fintech-soles/artifacts/2td609sq_506457094_29841105905504484_1973994614841110561_n.png",
+      "description": "Official SOLES logo",
+      "category": "brand"
+    }
+  },
+  "instructions_to_main_agent": [
+    "CRITICAL: Use the 'Barlow Condensed' font for all headings and numerical data (prices, dates, IDs). It gives the 'Tactical' feel.",
+    "CRITICAL: Implement a 'Mobile-First' approach. Buttons must be at least 48px (h-12) height for touch targets.",
+    "CRITICAL: Use the 'Traffic Light' color system (Green/Yellow/Red) strictly for credit status. Do not use these colors for decoration.",
+    "CRITICAL: The background should be 'Gray-100' (#F3F4F6), not pure white, to reduce glare in outdoor usage.",
+    "CRITICAL: Use 'Cards' instead of 'Tables' for mobile views of client lists. Only use Tables for Desktop Admin views.",
+    "CRITICAL: Add a 'Bottom Navigation Bar' for mobile layouts (Dashboard, Clients, Map, Profile).",
+    "CRITICAL: Ensure all inputs have `data-testid` attributes.",
+    "CRITICAL: Use the provided logo on the Login screen and Top Navigation.",
+    "CRITICAL: For the 'Cobranza' (Collection) flow, use large, clear confirmation dialogs to prevent errors in the field."
+  ],
+  "UNIVERSAL_GUIDELINES_FOR_MAIN_AGENT": [
+    "Dark colors look good when used independently without gradients. DO NOT use dark colors as gradients",
+    "Don't make generic centered layouts, simplistic gradients, and uniform styling.",
+    "Create depth through layered design elements with z-index hierarchy",
+    "Use glass-morphism effects with backdrop filters (12-24px blur) sparingly (only for overlays/modals in this context)",
+    "You MUST NOT apply universal transition. Eg: `transition: all`. This results in breaking transforms. Always add transitions for specific interactive elements like button, input excluding transforms",
+    "You MUST NOT center align the app container, ie do not add `.App { text-align: center; }` in the css file. This disrupts the human natural reading flow of text",
+    "Always use modern button styles like pill-shaped, or sharp button with interaction animations & color relevant to the app style",
+    "NEVER: use AI assistant Emoji characters like 🤖🧠💭💡🔮🎯📚🎭🎬🎪🎉🎊🎁🎀🎂🍰🎈🎨🎰💰💵💳🏦💎🪙💸🤑📊📈📉💹🔢🏆🥇 etc for icons.",
+    "Every interaction needs micro-animations - hover states, transitions, parallax effects, and entrance animations. Static = dead.",
+    "Use 2-3x more spacing than feels comfortable. Cramped designs look cheap.",
+    "Subtle grain textures, noise overlays, custom cursors, selection states, and loading animations: separates good from extraordinary.",
+    "Main agent relies on these image URLs. Missing categories (especially sponsor logos) = main agent will use placeholder text which is FORBIDDEN",
+    "Prioritize using pre-existing components from src/components/ui when applicable",
+    "Create new components that match the style and conventions of existing components when needed",
+    "Examine existing components to understand the project's component patterns before creating new ones",
+    "Components MUST use named exports (export const ComponentName = ...)",
+    "Pages MUST use default exports (export default function PageName() {...})",
+    "Use `sonner` for toasts. Sonner component are located in `/app/src/components/ui/sonner.tsx`"
+  ]
+}
