@@ -326,6 +326,20 @@ export default function CreditDetailPage() {
                 </p>
               </div>
             )}
+            
+            {/* Evidencia de Desembolso */}
+            {credit.evidencia_desembolso && (
+              <div className="mt-4 p-4 bg-blue-50 rounded-lg border border-blue-200">
+                <p className="text-blue-800 text-sm mb-2">
+                  <strong>Evidencia de Desembolso:</strong>
+                </p>
+                <img
+                  src={`${process.env.REACT_APP_BACKEND_URL}${credit.evidencia_desembolso}`}
+                  alt="Evidencia de desembolso"
+                  className="w-full max-w-md rounded-lg"
+                />
+              </div>
+            )}
           </CardContent>
         </Card>
 
