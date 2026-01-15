@@ -16,6 +16,7 @@ import CarteraPage from "@/pages/CarteraPage";
 import UsersPage from "@/pages/UsersPage";
 import CashboxPage from "@/pages/CashboxPage";
 import LogsPage from "@/pages/LogsPage";
+import AsignacionesPage from "@/pages/AsignacionesPage";
 
 // Context
 import { AuthProvider, useAuth } from "@/context/AuthContext";
