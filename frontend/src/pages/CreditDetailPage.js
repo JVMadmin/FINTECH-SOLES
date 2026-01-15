@@ -478,24 +478,80 @@ export default function CreditDetailPage() {
 
       {/* Activate Dialog */}
       <AlertDialog open={showActivateDialog} onOpenChange={setShowActivateDialog}>
-        <AlertDialogContent>
+        <AlertDialogContent className="max-w-md">
           <AlertDialogHeader>
             <AlertDialogTitle className="font-heading text-xl">
               Confirmar Desembolso
             </AlertDialogTitle>
-            <AlertDialogDescription>
-              Al confirmar el desembolso, el crédito se activará y comenzará el calendario de pagos.
-              <br /><br />
-              <strong>Monto a desembolsar:</strong> {formatCurrency(credit.monto_otorgado)}
-              <br />
-              <strong>Cliente:</strong> {credit.cliente_nombre}
+            <AlertDialogDescription asChild>
+              <div className="space-y-4">
+                <p>
+                  Al confirmar el desembolso, el crédito se activará y comenzará el calendario de pagos.
+                </p>
+                <div className="p-4 bg-gray-50 rounded-lg">
+                  <p><strong>Monto a desembolsar:</strong> {formatCurrency(credit.monto_otorgado)}</p>
+                  <p><strong>Cliente:</strong> {credit.cliente_nombre}</p>
+                </div>
+                
+                <div className="space-y-2">
+                  <Label className="text-sm font-medium">
+                    Evidencia Fotográfica del Desembolso *
+                  </Label>
+                  {evidenciaDesembolso ? (
+                    <div className="relative">
+                      <img
+                        src={`${process.env.REACT_APP_BACKEND_URL}${evidenciaDesembolso}`}
+                        alt="Evidencia"
+                        className="w-full h-48 object-cover rounded-lg"
+                      />
+                      <Button
+                        size="sm"
+                        variant="destructive"
+                        className="absolute top-2 right-2"
+                        onClick={() => setEvidenciaDesembolso("")}
+                      >
+                        <X className="w-4 h-4" />
+                      </Button>
+                    </div>
+                  ) : (
+                    <Button
+                      type="button"
+                      variant="outline"
+                      className="w-full h-32 flex-col gap-2"
+                      onClick={() => fileInputRef.current?.click()}
+                      disabled={isUploading}
+                    >
+                      {isUploading ? (
+                        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-yellow-600" />
+                      ) : (
+                        <>
+                          <Camera className="w-8 h-8 text-gray-400" />
+                          <span className="text-gray-500">Tomar foto del desembolso</span>
+                        </>
+                      )}
+                    </Button>
+                  )}
+                  <input
+                    type="file"
+                    ref={fileInputRef}
+                    className="hidden"
+                    accept="image/*"
+                    capture="environment"
+                    onChange={handleFileUpload}
+                  />
+                  <p className="text-xs text-gray-500">
+                    Tome una foto del momento de entrega del dinero al cliente
+                  </p>
+                </div>
+              </div>
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
-            <AlertDialogCancel>Cancelar</AlertDialogCancel>
+            <AlertDialogCancel onClick={() => setEvidenciaDesembolso("")}>Cancelar</AlertDialogCancel>
             <AlertDialogAction
               className="bg-yellow-600 hover:bg-yellow-700"
               onClick={handleActivate}
+              disabled={!evidenciaDesembolso}
             >
               Confirmar Desembolso
             </AlertDialogAction>
