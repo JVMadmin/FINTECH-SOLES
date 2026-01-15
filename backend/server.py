@@ -53,8 +53,24 @@ ROLES = ["desarrollador", "administrador", "gerente_regional", "supervisor", "as
 CREDIT_STATUS = ["pendiente", "autorizado", "vigente", "atrasado", "vencido", "liquidado", "rechazado"]
 CLIENT_STATUS = ["vigente", "atrasado", "vencido"]
 CREDIT_TYPES = ["diario", "semanal", "catorcenal"]
-REGIONS = ["yajalon", "chilon", "bachajon", "temo", "petalcingo", "tumbala", "tila"]
 PAYMENT_METHODS = ["efectivo", "transferencia", "deposito"]
+NO_PAYMENT_REASONS = ["no_pago", "no_localizado", "promesa_pago", "otro"]
+
+# Estructura jerárquica de zonas: Sede Regional -> Comunidades
+REGIONS_STRUCTURE = {
+    "yajalon": {
+        "nombre": "Yajalón",
+        "tipo": "sede_regional",
+        "numero_region": 3,
+        "comunidades": ["chilon", "bachajon", "temo", "petalcingo", "tumbala", "tila"]
+    }
+}
+
+# Lista plana de todas las localidades
+LOCALIDADES = ["yajalon", "chilon", "bachajon", "temo", "petalcingo", "tumbala", "tila"]
+
+# Para compatibilidad
+REGIONS = LOCALIDADES
 
 # ============== MODELS ==============
 class UserCreate(BaseModel):
