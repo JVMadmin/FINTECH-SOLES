@@ -449,6 +449,18 @@ async def get_asesores_by_region(region: str, user: dict = Depends(get_current_u
     
     return asesores
 
+@api_router.get("/users/asesores/all")
+async def get_all_asesores(user: dict = Depends(get_current_user)):
+    """Obtener todos los asesores - Solo para desarrollador/administrador"""
+    check_role(user, ["desarrollador", "administrador"])
+    
+    asesores = await db.users.find(
+        {"rol": "asesor", "activo": True},
+        {"_id": 0, "password": 0}
+    ).to_list(100)
+    
+    return asesores
+
 # ============== CLIENT ROUTES ==============
 @api_router.post("/clients", response_model=ClientResponse)
 async def create_client(data: ClientCreate, user: dict = Depends(get_current_user)):
