@@ -193,19 +193,19 @@ export default function ClientsPage() {
                 />
               </div>
               <div className="space-y-2">
-                <Label>Región *</Label>
+                <Label>Localidad *</Label>
                 <Select
                   value={newClient.region}
                   onValueChange={(value) => setNewClient({ ...newClient, region: value })}
                   disabled={hasRole(["asesor", "supervisor", "gerente_regional"])}
                 >
                   <SelectTrigger data-testid="client-region-select">
-                    <SelectValue placeholder="Seleccionar región" />
+                    <SelectValue placeholder="Seleccionar localidad" />
                   </SelectTrigger>
                   <SelectContent>
                     {REGIONS.map((region) => (
-                      <SelectItem key={region} value={region}>
-                        {region.charAt(0).toUpperCase() + region.slice(1)}
+                      <SelectItem key={region.id} value={region.id}>
+                        {region.nombre}
                       </SelectItem>
                     ))}
                   </SelectContent>
