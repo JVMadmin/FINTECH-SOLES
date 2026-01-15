@@ -17,6 +17,7 @@ import {
   DollarSign,
   Calendar,
   Bell,
+  Briefcase,
 } from "lucide-react";
 import { toast } from "sonner";
 
