@@ -170,8 +170,8 @@ export default function CreditDetailPage() {
         </Button>
         
         <div className="flex gap-2">
-          {/* Gerente Actions */}
-          {hasRole(["desarrollador", "gerente_regional"]) && credit.estatus === "pendiente" && (
+          {/* Gerente y Supervisor Actions */}
+          {hasRole(["desarrollador", "gerente_regional", "supervisor"]) && credit.estatus === "pendiente" && (
             <>
               <Button
                 variant="outline"
@@ -193,7 +193,7 @@ export default function CreditDetailPage() {
             </>
           )}
           
-          {hasRole(["desarrollador", "gerente_regional"]) && credit.estatus === "autorizado" && (
+          {hasRole(["desarrollador", "gerente_regional", "supervisor"]) && credit.estatus === "autorizado" && (
             <Button
               className="bg-yellow-600 hover:bg-yellow-700"
               onClick={() => setShowActivateDialog(true)}

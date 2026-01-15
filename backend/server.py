@@ -739,8 +739,8 @@ async def get_credit(credit_id: str, user: dict = Depends(get_current_user)):
 
 @api_router.post("/credits/{credit_id}/authorize")
 async def authorize_credit(credit_id: str, user: dict = Depends(get_current_user)):
-    """Autorizar un crédito - Solo Gerente Regional"""
-    check_role(user, ["desarrollador", "gerente_regional"])
+    """Autorizar un crédito - Gerente Regional y Supervisor"""
+    check_role(user, ["desarrollador", "gerente_regional", "supervisor"])
     
     credit = await db.credits.find_one({"id": credit_id}, {"_id": 0})
     if not credit:
@@ -750,7 +750,7 @@ async def authorize_credit(credit_id: str, user: dict = Depends(get_current_user
         raise HTTPException(status_code=400, detail="Solo se pueden autorizar créditos pendientes")
     
     # Verificar región
-    if user["rol"] == "gerente_regional" and credit.get("region") != user["region"]:
+    if user["rol"] in ["gerente_regional", "supervisor"] and credit.get("region") != user["region"]:
         raise HTTPException(status_code=403, detail="No tiene acceso a créditos de otra región")
     
     await db.credits.update_one(
@@ -769,8 +769,8 @@ async def authorize_credit(credit_id: str, user: dict = Depends(get_current_user
 
 @api_router.post("/credits/{credit_id}/reject")
 async def reject_credit(credit_id: str, motivo: str = "Sin especificar", user: dict = Depends(get_current_user)):
-    """Rechazar un crédito - Solo Gerente Regional"""
-    check_role(user, ["desarrollador", "gerente_regional"])
+    """Rechazar un crédito - Gerente Regional y Supervisor"""
+    check_role(user, ["desarrollador", "gerente_regional", "supervisor"])
     
     credit = await db.credits.find_one({"id": credit_id}, {"_id": 0})
     if not credit:
@@ -780,7 +780,7 @@ async def reject_credit(credit_id: str, motivo: str = "Sin especificar", user: d
         raise HTTPException(status_code=400, detail="Solo se pueden rechazar créditos pendientes")
     
     # Verificar región
-    if user["rol"] == "gerente_regional" and credit.get("region") != user["region"]:
+    if user["rol"] in ["gerente_regional", "supervisor"] and credit.get("region") != user["region"]:
         raise HTTPException(status_code=403, detail="No tiene acceso a créditos de otra región")
     
     await db.credits.update_one(
