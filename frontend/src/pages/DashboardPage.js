@@ -249,6 +249,52 @@ export default function DashboardPage() {
         </Card>
       )}
 
+      {/* Cartera Regional para Supervisores */}
+      {carteraRegional && carteraRegional.asesores?.length > 0 && (
+        <Card data-testid="cartera-regional-card">
+          <CardHeader>
+            <CardTitle className="font-heading text-xl flex items-center gap-2">
+              <Briefcase className="w-5 h-5 text-purple-600" />
+              Cartera Regional - Mis Asesores
+            </CardTitle>
+            <CardDescription>Resumen de cartera por asesor</CardDescription>
+          </CardHeader>
+          <CardContent>
+            <div className="overflow-x-auto">
+              <table className="w-full text-sm">
+                <thead>
+                  <tr className="border-b">
+                    <th className="text-left py-2 px-3">Asesor</th>
+                    <th className="text-right py-2 px-3">Clientes</th>
+                    <th className="text-right py-2 px-3">Créditos</th>
+                    <th className="text-right py-2 px-3">Saldo Pendiente</th>
+                    <th className="text-right py-2 px-3">Cobrado Hoy</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {carteraRegional.asesores.map((asesor) => (
+                    <tr key={asesor.id} className="border-b hover:bg-gray-50">
+                      <td className="py-2 px-3 font-medium">{asesor.nombre}</td>
+                      <td className="py-2 px-3 text-right">{asesor.clientes}</td>
+                      <td className="py-2 px-3 text-right">{asesor.creditos_activos}</td>
+                      <td className="py-2 px-3 text-right">{formatCurrency(asesor.saldo_pendiente)}</td>
+                      <td className="py-2 px-3 text-right text-green-600 font-medium">{formatCurrency(asesor.cobro_hoy)}</td>
+                    </tr>
+                  ))}
+                  <tr className="bg-gray-100 font-bold">
+                    <td className="py-2 px-3">TOTAL REGIONAL</td>
+                    <td className="py-2 px-3 text-right">{carteraRegional.totales.clientes}</td>
+                    <td className="py-2 px-3 text-right">{carteraRegional.totales.creditos_vigentes}</td>
+                    <td className="py-2 px-3 text-right">{formatCurrency(carteraRegional.totales.saldo_pendiente)}</td>
+                    <td className="py-2 px-3 text-right text-green-600">{formatCurrency(carteraRegional.totales.cobro_hoy)}</td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+          </CardContent>
+        </Card>
+      )}
+
       {/* Alerts Section */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         {/* Today's Alerts */}
