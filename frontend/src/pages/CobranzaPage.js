@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { Link, useSearchParams } from "react-router-dom";
 import axios from "axios";
 import { useAuth } from "@/context/AuthContext";
@@ -41,11 +41,21 @@ import {
   Calendar,
   CheckCircle,
   User,
-  CreditCard,
+  XCircle,
+  Camera,
+  MapPin,
+  Phone,
 } from "lucide-react";
 import { toast } from "sonner";
 
 const API = `${process.env.REACT_APP_BACKEND_URL}/api`;
+
+const NO_PAYMENT_REASONS = [
+  { value: "no_pago", label: "Cliente no pagó", icon: XCircle, color: "text-red-500" },
+  { value: "no_localizado", label: "No se localizó", icon: MapPin, color: "text-orange-500" },
+  { value: "promesa_pago", label: "Promesa de pago", icon: Calendar, color: "text-blue-500" },
+  { value: "otro", label: "Otro motivo", icon: AlertTriangle, color: "text-gray-500" },
+];
 
 export default function CobranzaPage() {
   const { user } = useAuth();
@@ -53,16 +63,27 @@ export default function CobranzaPage() {
   const [alerts, setAlerts] = useState([]);
   const [isLoading, setIsLoading] = useState(true);
   const [selectedAlert, setSelectedAlert] = useState(null);
+  
+  // Payment states
   const [paymentAmount, setPaymentAmount] = useState("");
   const [paymentMethod, setPaymentMethod] = useState("efectivo");
   const [paymentNotes, setPaymentNotes] = useState("");
   const [showPaymentDialog, setShowPaymentDialog] = useState(false);
   const [showConfirmDialog, setShowConfirmDialog] = useState(false);
+  
+  // No Payment states
+  const [showNoPaymentDialog, setShowNoPaymentDialog] = useState(false);
+  const [noPaymentReason, setNoPaymentReason] = useState("");
+  const [noPaymentDescription, setNoPaymentDescription] = useState("");
+  const [noPaymentEvidence, setNoPaymentEvidence] = useState("");
+  const [promiseDate, setPromiseDate] = useState("");
+  const [showNoPaymentConfirm, setShowNoPaymentConfirm] = useState(false);
+  
+  const fileInputRef = useRef(null);
 
   useEffect(() => {
     fetchAlerts();
     
-    // Check if coming from credit detail
     const creditoId = searchParams.get("credito_id");
     if (creditoId) {
       loadCreditForPayment(creditoId);
@@ -85,7 +106,6 @@ export default function CobranzaPage() {
       const response = await axios.get(`${API}/credits/${creditoId}`);
       const credit = response.data;
       
-      // Find next pending payment
       const nextPayment = credit.calendario_pagos?.find(p => !p.pagado);
       
       if (nextPayment) {
@@ -105,11 +125,20 @@ export default function CobranzaPage() {
     }
   };
 
-  const handleSelectAlert = (alert) => {
+  const handleSelectAlert = (alert, action = "payment") => {
     setSelectedAlert(alert);
     setPaymentAmount(alert.monto_pendiente.toString());
     setPaymentNotes("");
-    setShowPaymentDialog(true);
+    setNoPaymentReason("");
+    setNoPaymentDescription("");
+    setNoPaymentEvidence("");
+    setPromiseDate("");
+    
+    if (action === "payment") {
+      setShowPaymentDialog(true);
+    } else {
+      setShowNoPaymentDialog(true);
+    }
   };
 
   const handleConfirmPayment = () => {
@@ -138,6 +167,60 @@ export default function CobranzaPage() {
       fetchAlerts();
     } catch (error) {
       toast.error(error.response?.data?.detail || "Error al registrar pago");
+    }
+  };
+
+  const handleConfirmNoPayment = () => {
+    if (!noPaymentReason) {
+      toast.error("Seleccione un motivo");
+      return;
+    }
+    if (noPaymentReason === "promesa_pago" && !promiseDate) {
+      toast.error("Ingrese la fecha de promesa de pago");
+      return;
+    }
+    setShowNoPaymentDialog(false);
+    setShowNoPaymentConfirm(true);
+  };
+
+  const handleRegisterNoPayment = async () => {
+    try {
+      await axios.post(`${API}/no-payments`, {
+        credito_id: selectedAlert.credito_id,
+        motivo: noPaymentReason,
+        descripcion: noPaymentDescription,
+        evidencia_url: noPaymentEvidence,
+        fecha_promesa: noPaymentReason === "promesa_pago" ? promiseDate : null,
+      });
+      
+      toast.success("Incidencia registrada correctamente");
+      setShowNoPaymentConfirm(false);
+      setSelectedAlert(null);
+      setNoPaymentReason("");
+      setNoPaymentDescription("");
+      setNoPaymentEvidence("");
+      setPromiseDate("");
+      fetchAlerts();
+    } catch (error) {
+      toast.error(error.response?.data?.detail || "Error al registrar incidencia");
+    }
+  };
+
+  const handleFileUpload = async (e) => {
+    const file = e.target.files[0];
+    if (!file) return;
+
+    const formData = new FormData();
+    formData.append("file", file);
+
+    try {
+      const response = await axios.post(`${API}/upload`, formData, {
+        headers: { "Content-Type": "multipart/form-data" },
+      });
+      setNoPaymentEvidence(response.data.url);
+      toast.success("Evidencia subida correctamente");
+    } catch (error) {
+      toast.error("Error al subir evidencia");
     }
   };
 
@@ -187,7 +270,6 @@ export default function CobranzaPage() {
     }
   };
 
-  // Group alerts by type
   const alertsHoy = alerts.filter(a => a.tipo === "pago_hoy");
   const alertsAtrasados = alerts.filter(a => a.tipo === "atrasado");
   const alertsPorVencer = alerts.filter(a => a.tipo === "por_vencer");
@@ -278,8 +360,7 @@ export default function CobranzaPage() {
                 {alertsAtrasados.map((alert, index) => (
                   <Card
                     key={`${alert.credito_id}-${index}`}
-                    className={`${getAlertCardClass(alert.tipo)} cursor-pointer hover:shadow-md transition-shadow`}
-                    onClick={() => handleSelectAlert(alert)}
+                    className={`${getAlertCardClass(alert.tipo)}`}
                     data-testid={`alert-atrasado-${index}`}
                   >
                     <CardContent className="p-4">
@@ -293,11 +374,34 @@ export default function CobranzaPage() {
                             </p>
                           </div>
                         </div>
-                        <div className="text-right">
-                          {getAlertBadge(alert.tipo, alert.dias_atraso)}
-                          <p className="font-heading text-xl font-bold mt-1">
-                            {formatCurrency(alert.monto_pendiente)}
-                          </p>
+                        <div className="flex items-center gap-2">
+                          <div className="text-right mr-4">
+                            {getAlertBadge(alert.tipo, alert.dias_atraso)}
+                            <p className="font-heading text-xl font-bold mt-1">
+                              {formatCurrency(alert.monto_pendiente)}
+                            </p>
+                          </div>
+                          <div className="flex flex-col gap-2">
+                            <Button
+                              size="sm"
+                              className="bg-green-600 hover:bg-green-700"
+                              onClick={() => handleSelectAlert(alert, "payment")}
+                              data-testid={`pay-btn-${index}`}
+                            >
+                              <DollarSign className="w-4 h-4 mr-1" />
+                              Cobrar
+                            </Button>
+                            <Button
+                              size="sm"
+                              variant="outline"
+                              className="border-red-300 text-red-600 hover:bg-red-50"
+                              onClick={() => handleSelectAlert(alert, "no_payment")}
+                              data-testid={`no-pay-btn-${index}`}
+                            >
+                              <XCircle className="w-4 h-4 mr-1" />
+                              No Pagó
+                            </Button>
+                          </div>
                         </div>
                       </div>
                     </CardContent>
@@ -318,8 +422,7 @@ export default function CobranzaPage() {
                 {alertsHoy.map((alert, index) => (
                   <Card
                     key={`${alert.credito_id}-${index}`}
-                    className={`${getAlertCardClass(alert.tipo)} cursor-pointer hover:shadow-md transition-shadow`}
-                    onClick={() => handleSelectAlert(alert)}
+                    className={`${getAlertCardClass(alert.tipo)}`}
                     data-testid={`alert-hoy-${index}`}
                   >
                     <CardContent className="p-4">
@@ -333,11 +436,32 @@ export default function CobranzaPage() {
                             </p>
                           </div>
                         </div>
-                        <div className="text-right">
-                          {getAlertBadge(alert.tipo)}
-                          <p className="font-heading text-xl font-bold mt-1">
-                            {formatCurrency(alert.monto_pendiente)}
-                          </p>
+                        <div className="flex items-center gap-2">
+                          <div className="text-right mr-4">
+                            {getAlertBadge(alert.tipo)}
+                            <p className="font-heading text-xl font-bold mt-1">
+                              {formatCurrency(alert.monto_pendiente)}
+                            </p>
+                          </div>
+                          <div className="flex flex-col gap-2">
+                            <Button
+                              size="sm"
+                              className="bg-green-600 hover:bg-green-700"
+                              onClick={() => handleSelectAlert(alert, "payment")}
+                            >
+                              <DollarSign className="w-4 h-4 mr-1" />
+                              Cobrar
+                            </Button>
+                            <Button
+                              size="sm"
+                              variant="outline"
+                              className="border-red-300 text-red-600 hover:bg-red-50"
+                              onClick={() => handleSelectAlert(alert, "no_payment")}
+                            >
+                              <XCircle className="w-4 h-4 mr-1" />
+                              No Pagó
+                            </Button>
+                          </div>
                         </div>
                       </div>
                     </CardContent>
@@ -358,8 +482,7 @@ export default function CobranzaPage() {
                 {alertsPorVencer.map((alert, index) => (
                   <Card
                     key={`${alert.credito_id}-${index}`}
-                    className={`${getAlertCardClass(alert.tipo)} cursor-pointer hover:shadow-md transition-shadow`}
-                    onClick={() => handleSelectAlert(alert)}
+                    className={`${getAlertCardClass(alert.tipo)}`}
                     data-testid={`alert-proximo-${index}`}
                   >
                     <CardContent className="p-4">
@@ -373,11 +496,21 @@ export default function CobranzaPage() {
                             </p>
                           </div>
                         </div>
-                        <div className="text-right">
-                          {getAlertBadge(alert.tipo)}
-                          <p className="font-heading text-xl font-bold mt-1">
-                            {formatCurrency(alert.monto_pendiente)}
-                          </p>
+                        <div className="flex items-center gap-2">
+                          <div className="text-right mr-4">
+                            {getAlertBadge(alert.tipo)}
+                            <p className="font-heading text-xl font-bold mt-1">
+                              {formatCurrency(alert.monto_pendiente)}
+                            </p>
+                          </div>
+                          <Button
+                            size="sm"
+                            variant="outline"
+                            onClick={() => handleSelectAlert(alert, "payment")}
+                          >
+                            <DollarSign className="w-4 h-4 mr-1" />
+                            Adelantar Pago
+                          </Button>
                         </div>
                       </div>
                     </CardContent>
@@ -404,7 +537,6 @@ export default function CobranzaPage() {
 
           {selectedAlert && (
             <div className="space-y-4 py-4">
-              {/* Client Info */}
               <div className="p-4 bg-gray-50 rounded-lg">
                 <div className="flex items-center gap-3">
                   <User className="w-8 h-8 text-gray-400" />
@@ -417,7 +549,6 @@ export default function CobranzaPage() {
                 </div>
               </div>
 
-              {/* Amount */}
               <div className="space-y-2">
                 <Label>Monto del Pago *</Label>
                 <div className="relative">
@@ -436,7 +567,6 @@ export default function CobranzaPage() {
                 </p>
               </div>
 
-              {/* Payment Method */}
               <div className="space-y-2">
                 <Label>Método de Pago</Label>
                 <Select value={paymentMethod} onValueChange={setPaymentMethod}>
@@ -451,7 +581,6 @@ export default function CobranzaPage() {
                 </Select>
               </div>
 
-              {/* Notes */}
               <div className="space-y-2">
                 <Label>Notas (opcional)</Label>
                 <Textarea
@@ -479,7 +608,134 @@ export default function CobranzaPage() {
         </DialogContent>
       </Dialog>
 
-      {/* Confirmation Dialog */}
+      {/* No Payment Dialog */}
+      <Dialog open={showNoPaymentDialog} onOpenChange={setShowNoPaymentDialog}>
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle className="font-heading text-xl uppercase flex items-center gap-2">
+              <XCircle className="w-5 h-5 text-red-500" />
+              Registrar Incidencia
+            </DialogTitle>
+            <DialogDescription>
+              Registre el motivo por el cual no se realizó el cobro
+            </DialogDescription>
+          </DialogHeader>
+
+          {selectedAlert && (
+            <div className="space-y-4 py-4">
+              <div className="p-4 bg-gray-50 rounded-lg">
+                <div className="flex items-center gap-3">
+                  <User className="w-8 h-8 text-gray-400" />
+                  <div>
+                    <p className="font-medium">{selectedAlert.cliente_nombre}</p>
+                    <p className="text-sm text-gray-500">
+                      Monto pendiente: {formatCurrency(selectedAlert.monto_pendiente)}
+                    </p>
+                  </div>
+                </div>
+              </div>
+
+              <div className="space-y-2">
+                <Label>Motivo *</Label>
+                <div className="grid grid-cols-2 gap-2">
+                  {NO_PAYMENT_REASONS.map((reason) => {
+                    const Icon = reason.icon;
+                    return (
+                      <Button
+                        key={reason.value}
+                        type="button"
+                        variant={noPaymentReason === reason.value ? "default" : "outline"}
+                        className={`h-auto py-3 flex-col gap-1 ${
+                          noPaymentReason === reason.value ? "bg-yellow-600" : ""
+                        }`}
+                        onClick={() => setNoPaymentReason(reason.value)}
+                      >
+                        <Icon className={`w-5 h-5 ${noPaymentReason === reason.value ? "text-white" : reason.color}`} />
+                        <span className="text-xs">{reason.label}</span>
+                      </Button>
+                    );
+                  })}
+                </div>
+              </div>
+
+              {noPaymentReason === "promesa_pago" && (
+                <div className="space-y-2">
+                  <Label>Fecha de Promesa de Pago *</Label>
+                  <Input
+                    type="date"
+                    value={promiseDate}
+                    onChange={(e) => setPromiseDate(e.target.value)}
+                    min={new Date().toISOString().split("T")[0]}
+                  />
+                </div>
+              )}
+
+              <div className="space-y-2">
+                <Label>Descripción (opcional)</Label>
+                <Textarea
+                  value={noPaymentDescription}
+                  onChange={(e) => setNoPaymentDescription(e.target.value)}
+                  placeholder="Detalles adicionales..."
+                  rows={2}
+                />
+              </div>
+
+              <div className="space-y-2">
+                <Label>Evidencia de Contacto (opcional)</Label>
+                {noPaymentEvidence ? (
+                  <div className="relative">
+                    <img
+                      src={`${process.env.REACT_APP_BACKEND_URL}${noPaymentEvidence}`}
+                      alt="Evidencia"
+                      className="w-full h-32 object-cover rounded-lg"
+                    />
+                    <Button
+                      size="sm"
+                      variant="destructive"
+                      className="absolute top-2 right-2"
+                      onClick={() => setNoPaymentEvidence("")}
+                    >
+                      <XCircle className="w-4 h-4" />
+                    </Button>
+                  </div>
+                ) : (
+                  <Button
+                    type="button"
+                    variant="outline"
+                    className="w-full h-24 flex-col gap-2"
+                    onClick={() => fileInputRef.current?.click()}
+                  >
+                    <Camera className="w-6 h-6 text-gray-400" />
+                    <span className="text-sm text-gray-500">Subir foto de evidencia</span>
+                  </Button>
+                )}
+                <input
+                  type="file"
+                  ref={fileInputRef}
+                  className="hidden"
+                  accept="image/*"
+                  onChange={handleFileUpload}
+                />
+              </div>
+            </div>
+          )}
+
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setShowNoPaymentDialog(false)}>
+              Cancelar
+            </Button>
+            <Button
+              className="bg-red-600 hover:bg-red-700"
+              onClick={handleConfirmNoPayment}
+              data-testid="continue-no-payment-btn"
+            >
+              Registrar Incidencia
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Payment Confirmation Dialog */}
       <AlertDialog open={showConfirmDialog} onOpenChange={setShowConfirmDialog}>
         <AlertDialogContent>
           <AlertDialogHeader>
@@ -505,6 +761,38 @@ export default function CobranzaPage() {
             >
               <CheckCircle className="w-4 h-4 mr-2" />
               Confirmar Pago
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
+      {/* No Payment Confirmation Dialog */}
+      <AlertDialog open={showNoPaymentConfirm} onOpenChange={setShowNoPaymentConfirm}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle className="font-heading text-xl">
+              Confirmar Incidencia
+            </AlertDialogTitle>
+            <AlertDialogDescription className="space-y-2">
+              <p>Por favor confirme los datos de la incidencia:</p>
+              <div className="mt-4 p-4 bg-gray-50 rounded-lg space-y-2">
+                <p><strong>Cliente:</strong> {selectedAlert?.cliente_nombre}</p>
+                <p><strong>Motivo:</strong> {NO_PAYMENT_REASONS.find(r => r.value === noPaymentReason)?.label}</p>
+                {promiseDate && <p><strong>Fecha de promesa:</strong> {promiseDate}</p>}
+                {noPaymentDescription && <p><strong>Descripción:</strong> {noPaymentDescription}</p>}
+                {noPaymentEvidence && <p><strong>Evidencia:</strong> Foto adjunta</p>}
+              </div>
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancelar</AlertDialogCancel>
+            <AlertDialogAction
+              className="bg-red-600 hover:bg-red-700"
+              onClick={handleRegisterNoPayment}
+              data-testid="confirm-no-payment-btn"
+            >
+              <XCircle className="w-4 h-4 mr-2" />
+              Confirmar Incidencia
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
