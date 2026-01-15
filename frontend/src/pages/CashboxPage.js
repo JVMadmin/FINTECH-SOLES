@@ -135,7 +135,7 @@ export default function CashboxPage() {
           <div className="flex items-center justify-between">
             <CardTitle className="font-heading text-xl uppercase flex items-center gap-2">
               <Receipt className="w-5 h-5" />
-              Resumen de Caja
+              {user?.rol === "asesor" ? "Mi Caja del Día" : "Resumen de Caja Regional"}
             </CardTitle>
             {todayCashbox?.estatus === "cerrado" ? (
               <Badge className="bg-green-100 text-green-800">
