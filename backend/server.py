@@ -838,9 +838,9 @@ async def reject_credit(credit_id: str, motivo: str = "Sin especificar", user: d
     return {"message": "Crédito rechazado"}
 
 @api_router.post("/credits/{credit_id}/activate")
-async def activate_credit(credit_id: str, user: dict = Depends(get_current_user)):
-    """Activar crédito después de desembolso - Gerente Regional y Supervisor"""
-    check_role(user, ["desarrollador", "gerente_regional", "supervisor"])
+async def activate_credit(credit_id: str, data: ActivateCreditRequest, user: dict = Depends(get_current_user)):
+    """Activar crédito después de desembolso - Requiere evidencia fotográfica"""
+    check_role(user, ["desarrollador", "gerente_regional", "supervisor", "asesor"])
     
     credit = await db.credits.find_one({"id": credit_id}, {"_id": 0})
     if not credit:
@@ -849,19 +849,24 @@ async def activate_credit(credit_id: str, user: dict = Depends(get_current_user)
     if credit["estatus"] != "autorizado":
         raise HTTPException(status_code=400, detail="Solo se pueden activar créditos autorizados")
     
+    # Verificar que se proporcione evidencia
+    if not data.evidencia_desembolso:
+        raise HTTPException(status_code=400, detail="Se requiere evidencia fotográfica del desembolso")
+    
     await db.credits.update_one(
         {"id": credit_id},
         {"$set": {
             "estatus": "vigente",
             "activado_por": user["sub"],
-            "activado_fecha": datetime.now(timezone.utc).isoformat()
+            "activado_fecha": datetime.now(timezone.utc).isoformat(),
+            "evidencia_desembolso": data.evidencia_desembolso
         }}
     )
     
     await log_action(user["sub"], user["nombre"], "activar_credito", "credito", credit_id,
-                    {"cliente": credit["cliente_nombre"]})
+                    {"cliente": credit["cliente_nombre"], "evidencia": data.evidencia_desembolso})
     
-    return {"message": "Crédito activado"}
+    return {"message": "Crédito activado con evidencia de desembolso"}
 
 # ============== PAYMENT ROUTES ==============
 @api_router.post("/payments", response_model=PaymentResponse)
