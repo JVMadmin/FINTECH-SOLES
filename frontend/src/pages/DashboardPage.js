@@ -134,6 +134,12 @@ export default function DashboardPage() {
               </>
             )}
           </p>
+          {stats?.tipo_cartera && (
+            <Badge className={stats.tipo_cartera === "regional" ? "bg-purple-100 text-purple-800 mt-2" : "bg-blue-100 text-blue-800 mt-2"}>
+              {stats.tipo_cartera === "regional" ? "📊 Cartera Regional" : "👤 Cartera Personal"}
+              {stats.asesores_count > 0 && ` • ${stats.asesores_count} asesores`}
+            </Badge>
+          )}
         </div>
         <div className="flex gap-3">
           <Link to="/clients">
