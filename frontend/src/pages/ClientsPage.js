@@ -1,0 +1,399 @@
+import { useState, useEffect } from "react";
+import { Link, useNavigate } from "react-router-dom";
+import axios from "axios";
+import { useAuth } from "@/context/AuthContext";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Badge } from "@/components/ui/badge";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+  DialogFooter,
+  DialogDescription,
+} from "@/components/ui/dialog";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table";
+import {
+  Users,
+  Plus,
+  Search,
+  Phone,
+  MapPin,
+  Eye,
+  Filter,
+  X,
+} from "lucide-react";
+import { toast } from "sonner";
+
+const API = `${process.env.REACT_APP_BACKEND_URL}/api`;
+
+const REGIONS = ["yajalon", "chilon", "bachajon", "temo", "petalcingo", "tumbala", "tila"];
+
+export default function ClientsPage() {
+  const { user, hasRole } = useAuth();
+  const navigate = useNavigate();
+  const [clients, setClients] = useState([]);
+  const [isLoading, setIsLoading] = useState(true);
+  const [searchTerm, setSearchTerm] = useState("");
+  const [filterRegion, setFilterRegion] = useState("");
+  const [filterEstatus, setFilterEstatus] = useState("");
+  const [isDialogOpen, setIsDialogOpen] = useState(false);
+  const [newClient, setNewClient] = useState({
+    nombre_completo: "",
+    telefono: "",
+    direccion: "",
+    region: user?.region || "",
+    referencias: [],
+  });
+
+  useEffect(() => {
+    fetchClients();
+  }, [filterRegion, filterEstatus]);
+
+  const fetchClients = async () => {
+    try {
+      let url = `${API}/clients`;
+      const params = new URLSearchParams();
+      if (filterRegion) params.append("region", filterRegion);
+      if (filterEstatus) params.append("estatus", filterEstatus);
+      if (params.toString()) url += `?${params.toString()}`;
+
+      const response = await axios.get(url);
+      setClients(response.data);
+    } catch (error) {
+      toast.error("Error al cargar clientes");
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const handleCreateClient = async () => {
+    if (!newClient.nombre_completo || !newClient.telefono || !newClient.direccion || !newClient.region) {
+      toast.error("Por favor complete todos los campos obligatorios");
+      return;
+    }
+
+    try {
+      const response = await axios.post(`${API}/clients`, newClient);
+      toast.success("Cliente creado exitosamente");
+      setIsDialogOpen(false);
+      setNewClient({
+        nombre_completo: "",
+        telefono: "",
+        direccion: "",
+        region: user?.region || "",
+        referencias: [],
+      });
+      fetchClients();
+      navigate(`/clients/${response.data.id}`);
+    } catch (error) {
+      toast.error(error.response?.data?.detail || "Error al crear cliente");
+    }
+  };
+
+  const getStatusBadge = (estatus) => {
+    switch (estatus) {
+      case "vigente":
+        return <Badge className="status-vigente">Vigente</Badge>;
+      case "atrasado":
+        return <Badge className="status-atrasado">Atrasado</Badge>;
+      case "vencido":
+        return <Badge className="status-vencido">Vencido</Badge>;
+      default:
+        return <Badge className="status-pendiente">{estatus}</Badge>;
+    }
+  };
+
+  const filteredClients = clients.filter((client) =>
+    client.nombre_completo.toLowerCase().includes(searchTerm.toLowerCase()) ||
+    client.telefono.includes(searchTerm)
+  );
+
+  const clearFilters = () => {
+    setFilterRegion("");
+    setFilterEstatus("");
+    setSearchTerm("");
+  };
+
+  return (
+    <div className="space-y-6 animate-fade-in" data-testid="clients-page">
+      {/* Header */}
+      <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
+        <div>
+          <h1 className="font-heading text-3xl md:text-4xl font-bold text-gray-900 uppercase tracking-tight">
+            Clientes
+          </h1>
+          <p className="text-gray-500 mt-1">{filteredClients.length} clientes encontrados</p>
+        </div>
+        
+        <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
+          <DialogTrigger asChild>
+            <Button className="bg-yellow-600 hover:bg-yellow-700" data-testid="new-client-btn">
+              <Plus className="w-4 h-4 mr-2" />
+              Nuevo Cliente
+            </Button>
+          </DialogTrigger>
+          <DialogContent className="max-w-md">
+            <DialogHeader>
+              <DialogTitle className="font-heading text-xl uppercase">Nuevo Cliente</DialogTitle>
+              <DialogDescription>Ingrese los datos del nuevo cliente</DialogDescription>
+            </DialogHeader>
+            <div className="space-y-4 py-4">
+              <div className="space-y-2">
+                <Label>Nombre Completo *</Label>
+                <Input
+                  value={newClient.nombre_completo}
+                  onChange={(e) => setNewClient({ ...newClient, nombre_completo: e.target.value })}
+                  placeholder="Nombre completo del cliente"
+                  data-testid="client-name-input"
+                />
+              </div>
+              <div className="space-y-2">
+                <Label>Teléfono *</Label>
+                <Input
+                  value={newClient.telefono}
+                  onChange={(e) => setNewClient({ ...newClient, telefono: e.target.value })}
+                  placeholder="Número de teléfono"
+                  data-testid="client-phone-input"
+                />
+              </div>
+              <div className="space-y-2">
+                <Label>Dirección *</Label>
+                <Input
+                  value={newClient.direccion}
+                  onChange={(e) => setNewClient({ ...newClient, direccion: e.target.value })}
+                  placeholder="Dirección completa"
+                  data-testid="client-address-input"
+                />
+              </div>
+              <div className="space-y-2">
+                <Label>Región *</Label>
+                <Select
+                  value={newClient.region}
+                  onValueChange={(value) => setNewClient({ ...newClient, region: value })}
+                  disabled={hasRole(["asesor", "supervisor", "gerente_regional"])}
+                >
+                  <SelectTrigger data-testid="client-region-select">
+                    <SelectValue placeholder="Seleccionar región" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {REGIONS.map((region) => (
+                      <SelectItem key={region} value={region}>
+                        {region.charAt(0).toUpperCase() + region.slice(1)}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+            </div>
+            <DialogFooter>
+              <Button variant="outline" onClick={() => setIsDialogOpen(false)}>
+                Cancelar
+              </Button>
+              <Button
+                className="bg-yellow-600 hover:bg-yellow-700"
+                onClick={handleCreateClient}
+                data-testid="save-client-btn"
+              >
+                Guardar Cliente
+              </Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
+      </div>
+
+      {/* Filters */}
+      <Card>
+        <CardContent className="p-4">
+          <div className="flex flex-col md:flex-row gap-4">
+            <div className="flex-1 relative">
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
+              <Input
+                placeholder="Buscar por nombre o teléfono..."
+                value={searchTerm}
+                onChange={(e) => setSearchTerm(e.target.value)}
+                className="pl-10"
+                data-testid="search-clients"
+              />
+            </div>
+            
+            {!hasRole(["asesor", "supervisor", "gerente_regional"]) && (
+              <Select value={filterRegion} onValueChange={setFilterRegion}>
+                <SelectTrigger className="w-full md:w-48" data-testid="filter-region">
+                  <SelectValue placeholder="Todas las regiones" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="">Todas las regiones</SelectItem>
+                  {REGIONS.map((region) => (
+                    <SelectItem key={region} value={region}>
+                      {region.charAt(0).toUpperCase() + region.slice(1)}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            )}
+
+            <Select value={filterEstatus} onValueChange={setFilterEstatus}>
+              <SelectTrigger className="w-full md:w-40" data-testid="filter-status">
+                <SelectValue placeholder="Todos los estatus" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="">Todos</SelectItem>
+                <SelectItem value="vigente">Vigente</SelectItem>
+                <SelectItem value="atrasado">Atrasado</SelectItem>
+                <SelectItem value="vencido">Vencido</SelectItem>
+              </SelectContent>
+            </Select>
+
+            {(filterRegion || filterEstatus || searchTerm) && (
+              <Button variant="ghost" onClick={clearFilters}>
+                <X className="w-4 h-4 mr-1" />
+                Limpiar
+              </Button>
+            )}
+          </div>
+        </CardContent>
+      </Card>
+
+      {/* Clients List - Mobile Cards */}
+      <div className="md:hidden space-y-3">
+        {isLoading ? (
+          <div className="space-y-3">
+            {[1, 2, 3].map((i) => (
+              <div key={i} className="h-32 bg-gray-200 rounded-xl animate-pulse" />
+            ))}
+          </div>
+        ) : filteredClients.length === 0 ? (
+          <Card>
+            <CardContent className="p-8 text-center">
+              <Users className="w-12 h-12 mx-auto mb-3 text-gray-400" />
+              <p className="text-gray-500">No se encontraron clientes</p>
+            </CardContent>
+          </Card>
+        ) : (
+          filteredClients.map((client) => (
+            <Link key={client.id} to={`/clients/${client.id}`}>
+              <Card className="card-interactive" data-testid={`client-card-${client.id}`}>
+                <CardContent className="p-4">
+                  <div className="flex items-start justify-between">
+                    <div className="flex-1">
+                      <div className="flex items-center gap-2 mb-1">
+                        <h3 className="font-medium text-gray-900">{client.nombre_completo}</h3>
+                        {getStatusBadge(client.estatus)}
+                      </div>
+                      <div className="flex items-center gap-2 text-sm text-gray-500 mb-1">
+                        <Phone className="w-3 h-3" />
+                        <a
+                          href={`tel:${client.telefono}`}
+                          onClick={(e) => e.stopPropagation()}
+                          className="text-blue-600 hover:underline"
+                        >
+                          {client.telefono}
+                        </a>
+                      </div>
+                      <div className="flex items-center gap-2 text-sm text-gray-500">
+                        <MapPin className="w-3 h-3" />
+                        <span className="capitalize">{client.region}</span>
+                      </div>
+                    </div>
+                    <Eye className="w-5 h-5 text-gray-400" />
+                  </div>
+                  {client.asesor_nombre && (
+                    <p className="text-xs text-gray-400 mt-2">
+                      Asesor: {client.asesor_nombre}
+                    </p>
+                  )}
+                </CardContent>
+              </Card>
+            </Link>
+          ))
+        )}
+      </div>
+
+      {/* Clients List - Desktop Table */}
+      <Card className="hidden md:block">
+        <CardContent className="p-0">
+          <Table>
+            <TableHeader>
+              <TableRow>
+                <TableHead>Cliente</TableHead>
+                <TableHead>Teléfono</TableHead>
+                <TableHead>Región</TableHead>
+                <TableHead>Asesor</TableHead>
+                <TableHead>Estatus</TableHead>
+                <TableHead className="text-right">Acciones</TableHead>
+              </TableRow>
+            </TableHeader>
+            <TableBody>
+              {isLoading ? (
+                <TableRow>
+                  <TableCell colSpan={6} className="text-center py-8">
+                    <div className="animate-pulse">Cargando...</div>
+                  </TableCell>
+                </TableRow>
+              ) : filteredClients.length === 0 ? (
+                <TableRow>
+                  <TableCell colSpan={6} className="text-center py-8 text-gray-500">
+                    No se encontraron clientes
+                  </TableCell>
+                </TableRow>
+              ) : (
+                filteredClients.map((client) => (
+                  <TableRow
+                    key={client.id}
+                    className="table-row-hover cursor-pointer"
+                    onClick={() => navigate(`/clients/${client.id}`)}
+                    data-testid={`client-row-${client.id}`}
+                  >
+                    <TableCell>
+                      <div className="font-medium">{client.nombre_completo}</div>
+                      <div className="text-xs text-gray-500 truncate max-w-xs">
+                        {client.direccion}
+                      </div>
+                    </TableCell>
+                    <TableCell>
+                      <a
+                        href={`tel:${client.telefono}`}
+                        onClick={(e) => e.stopPropagation()}
+                        className="text-blue-600 hover:underline flex items-center gap-1"
+                      >
+                        <Phone className="w-3 h-3" />
+                        {client.telefono}
+                      </a>
+                    </TableCell>
+                    <TableCell className="capitalize">{client.region}</TableCell>
+                    <TableCell>{client.asesor_nombre || "-"}</TableCell>
+                    <TableCell>{getStatusBadge(client.estatus)}</TableCell>
+                    <TableCell className="text-right">
+                      <Button variant="ghost" size="sm">
+                        <Eye className="w-4 h-4" />
+                      </Button>
+                    </TableCell>
+                  </TableRow>
+                ))
+              )}
+            </TableBody>
+          </Table>
+        </CardContent>
+      </Card>
+    </div>
+  );
+}
