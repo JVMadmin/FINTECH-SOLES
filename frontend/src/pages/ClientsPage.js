@@ -251,8 +251,8 @@ export default function ClientsPage() {
                 <SelectContent>
                   <SelectItem value="all">Todas las regiones</SelectItem>
                   {REGIONS.map((region) => (
-                    <SelectItem key={region} value={region}>
-                      {region.charAt(0).toUpperCase() + region.slice(1)}
+                    <SelectItem key={region.id} value={region.id}>
+                      {region.nombre}
                     </SelectItem>
                   ))}
                 </SelectContent>
