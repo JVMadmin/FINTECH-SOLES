@@ -58,9 +58,14 @@ export default function CarteraPage() {
 
   const fetchData = async () => {
     try {
+      // Para desarrollador/admin sin región, obtener todos los asesores
+      const asesoresUrl = user?.region 
+        ? `${API}/users/asesores/region/${user.region}`
+        : `${API}/users/asesores/all`;
+      
       const [clientsRes, asesoresRes] = await Promise.all([
         axios.get(`${API}/cartera/unassigned`),
-        axios.get(`${API}/users/asesores/region/${user?.region || ""}`),
+        axios.get(asesoresUrl),
       ]);
       setUnassignedClients(clientsRes.data);
       setAsesores(asesoresRes.data);
