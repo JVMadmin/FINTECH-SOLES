@@ -80,6 +80,7 @@ class UserCreate(BaseModel):
     rol: str
     region: Optional[str] = None
     telefono: Optional[str] = None
+    supervisor_id: Optional[str] = None  # Para asesores: ID del supervisor asignado
 
 class UserLogin(BaseModel):
     username: str
@@ -95,6 +96,16 @@ class UserResponse(BaseModel):
     telefono: Optional[str] = None
     activo: bool = True
     created_at: str
+    supervisor_id: Optional[str] = None
+    supervisor_nombre: Optional[str] = None
+
+class AssignSupervisorRequest(BaseModel):
+    supervisor_id: str
+    region: str
+
+class AssignAsesorRequest(BaseModel):
+    asesor_id: str
+    supervisor_id: str
 
 class ClientCreate(BaseModel):
     nombre_completo: str
