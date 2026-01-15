@@ -447,7 +447,131 @@ async def get_user(user_id: str, user: dict = Depends(get_current_user)):
         if user_data.get("region") != user["region"]:
             raise HTTPException(status_code=403, detail="No tiene acceso a este usuario")
     
+    # Obtener nombre del supervisor si existe
+    if user_data.get("supervisor_id"):
+        supervisor = await db.users.find_one({"id": user_data["supervisor_id"]}, {"_id": 0})
+        if supervisor:
+            user_data["supervisor_nombre"] = supervisor.get("nombre_completo")
+    
     return UserResponse(**user_data)
+
+# ============== ASSIGNMENT ROUTES ==============
+@api_router.post("/users/assign-supervisor")
+async def assign_supervisor_to_region(data: AssignSupervisorRequest, user: dict = Depends(get_current_user)):
+    """Asignar un supervisor a una región - Solo Gerente Regional, Admin o Desarrollador"""
+    check_role(user, ["desarrollador", "administrador", "gerente_regional"])
+    
+    # Verificar que el supervisor existe y tiene rol correcto
+    supervisor = await db.users.find_one({"id": data.supervisor_id, "rol": "supervisor"}, {"_id": 0})
+    if not supervisor:
+        raise HTTPException(status_code=404, detail="Supervisor no encontrado")
+    
+    # Verificar que la región es válida
+    if data.region not in LOCALIDADES:
+        raise HTTPException(status_code=400, detail=f"Región inválida. Opciones: {LOCALIDADES}")
+    
+    # Gerente regional solo puede asignar a su región
+    if user["rol"] == "gerente_regional" and data.region != user["region"]:
+        raise HTTPException(status_code=403, detail="Solo puede asignar supervisores a su región")
+    
+    # Actualizar supervisor
+    await db.users.update_one(
+        {"id": data.supervisor_id},
+        {"$set": {
+            "region": data.region,
+            "updated_at": datetime.now(timezone.utc).isoformat()
+        }}
+    )
+    
+    await log_action(user["sub"], user["nombre"], "asignar_supervisor_region", "usuario", data.supervisor_id,
+                    {"region": data.region, "supervisor": supervisor["nombre_completo"]})
+    
+    return {"message": f"Supervisor asignado a {data.region}"}
+
+@api_router.post("/users/assign-asesor")
+async def assign_asesor_to_supervisor(data: AssignAsesorRequest, user: dict = Depends(get_current_user)):
+    """Asignar un asesor a un supervisor - Solo Supervisor de la región"""
+    check_role(user, ["desarrollador", "administrador", "gerente_regional", "supervisor"])
+    
+    # Verificar que el asesor existe
+    asesor = await db.users.find_one({"id": data.asesor_id, "rol": "asesor"}, {"_id": 0})
+    if not asesor:
+        raise HTTPException(status_code=404, detail="Asesor no encontrado")
+    
+    # Verificar que el supervisor existe
+    supervisor = await db.users.find_one({"id": data.supervisor_id, "rol": "supervisor"}, {"_id": 0})
+    if not supervisor:
+        raise HTTPException(status_code=404, detail="Supervisor no encontrado")
+    
+    # Si es supervisor, solo puede asignar asesores a sí mismo
+    if user["rol"] == "supervisor":
+        if data.supervisor_id != user["sub"]:
+            raise HTTPException(status_code=403, detail="Solo puede asignar asesores a su propia cuenta")
+    
+    # Actualizar asesor con supervisor y región del supervisor
+    await db.users.update_one(
+        {"id": data.asesor_id},
+        {"$set": {
+            "supervisor_id": data.supervisor_id,
+            "supervisor_nombre": supervisor["nombre_completo"],
+            "region": supervisor["region"],
+            "updated_at": datetime.now(timezone.utc).isoformat()
+        }}
+    )
+    
+    await log_action(user["sub"], user["nombre"], "asignar_asesor_supervisor", "usuario", data.asesor_id,
+                    {"supervisor": supervisor["nombre_completo"], "asesor": asesor["nombre_completo"]})
+    
+    return {"message": f"Asesor asignado al supervisor {supervisor['nombre_completo']}"}
+
+@api_router.get("/users/my-asesores")
+async def get_my_asesores(user: dict = Depends(get_current_user)):
+    """Obtener asesores asignados al supervisor actual"""
+    check_role(user, ["desarrollador", "administrador", "gerente_regional", "supervisor"])
+    
+    query = {"rol": "asesor", "activo": True}
+    
+    if user["rol"] == "supervisor":
+        query["supervisor_id"] = user["sub"]
+    elif user["rol"] == "gerente_regional":
+        query["region"] = user["region"]
+    
+    asesores = await db.users.find(query, {"_id": 0, "password": 0}).to_list(100)
+    return asesores
+
+@api_router.get("/users/unassigned-asesores")
+async def get_unassigned_asesores(user: dict = Depends(get_current_user)):
+    """Obtener asesores sin supervisor asignado"""
+    check_role(user, ["desarrollador", "administrador", "gerente_regional", "supervisor"])
+    
+    query = {
+        "rol": "asesor",
+        "activo": True,
+        "$or": [{"supervisor_id": None}, {"supervisor_id": ""}]
+    }
+    
+    # Supervisor solo ve asesores de su región o sin región
+    if user["rol"] == "supervisor":
+        query["$or"] = [
+            {"supervisor_id": None, "region": user["region"]},
+            {"supervisor_id": None, "region": None},
+            {"supervisor_id": ""}
+        ]
+    
+    asesores = await db.users.find(query, {"_id": 0, "password": 0}).to_list(100)
+    return asesores
+
+@api_router.get("/users/supervisors-by-region/{region}")
+async def get_supervisors_by_region(region: str, user: dict = Depends(get_current_user)):
+    """Obtener supervisores de una región"""
+    check_role(user, ["desarrollador", "administrador", "gerente_regional"])
+    
+    supervisors = await db.users.find(
+        {"region": region, "rol": "supervisor", "activo": True},
+        {"_id": 0, "password": 0}
+    ).to_list(100)
+    
+    return supervisors
 
 @api_router.put("/users/{user_id}")
 async def update_user(user_id: str, data: dict, user: dict = Depends(get_current_user)):
