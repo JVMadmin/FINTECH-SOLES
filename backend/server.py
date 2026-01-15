@@ -1250,49 +1250,112 @@ async def get_alerts(user: dict = Depends(get_current_user)):
 # ============== CASH BOX ROUTES ==============
 @api_router.get("/cashbox/today")
 async def get_today_cashbox(user: dict = Depends(get_current_user)):
-    """Obtener caja del día actual"""
+    """Obtener caja del día actual - Personal para asesor, Regional para supervisor"""
     check_role(user, ["desarrollador", "administrador", "gerente_regional", "supervisor", "asesor"])
     
     today = datetime.now(timezone.utc).strftime("%Y-%m-%d")
+    today_start = datetime.strptime(today, "%Y-%m-%d").replace(tzinfo=timezone.utc)
+    today_end = today_start + timedelta(days=1)
     
-    query = {"fecha": today}
+    is_regional = user["rol"] in ["supervisor", "gerente_regional", "desarrollador", "administrador"]
     
+    # Construir query según rol
     if user["rol"] == "asesor":
-        query["asesor_id"] = user["sub"]
-    elif user["rol"] in ["supervisor", "gerente_regional"]:
-        query["region"] = user["region"]
+        payments_query = {"registrado_por": user["sub"]}
+    elif user["rol"] == "supervisor":
+        # Obtener IDs de asesores bajo este supervisor
+        asesores = await db.users.find({"supervisor_id": user["sub"], "rol": "asesor"}, {"_id": 0}).to_list(100)
+        asesor_ids = [a["id"] for a in asesores]
+        asesor_ids.append(user["sub"])  # Incluir al supervisor también si registró pagos
+        payments_query = {"registrado_por": {"$in": asesor_ids}}
+    elif user["rol"] == "gerente_regional":
+        payments_query = {"region": user["region"]}
+    else:
+        payments_query = {}
     
-    # Buscar caja existente
-    cashbox = await db.cashbox.find_one(query, {"_id": 0})
+    # Obtener pagos del día
+    payments = await db.payments.find({
+        **payments_query,
+        "fecha_pago": {"$gte": today_start.isoformat(), "$lt": today_end.isoformat()}
+    }, {"_id": 0}).to_list(1000)
     
-    if not cashbox:
-        # Calcular totales del día
-        payments_query = {"registrado_por": user["sub"]} if user["rol"] == "asesor" else {"region": user.get("region", "")}
-        
-        # Obtener pagos del día
-        today_start = datetime.strptime(today, "%Y-%m-%d").replace(tzinfo=timezone.utc)
-        today_end = today_start + timedelta(days=1)
-        
+    total_cobrado = sum(p["monto"] for p in payments)
+    
+    # Si es supervisor, agrupar por asesor
+    asesores_detalle = []
+    if is_regional and user["rol"] == "supervisor":
+        asesores = await db.users.find({"supervisor_id": user["sub"], "rol": "asesor"}, {"_id": 0}).to_list(100)
+        for asesor in asesores:
+            asesor_payments = [p for p in payments if p.get("registrado_por") == asesor["id"]]
+            asesores_detalle.append({
+                "asesor_id": asesor["id"],
+                "asesor_nombre": asesor["nombre_completo"],
+                "total_cobrado": sum(p["monto"] for p in asesor_payments),
+                "numero_pagos": len(asesor_payments)
+            })
+    
+    cashbox = {
+        "id": str(uuid.uuid4()),
+        "fecha": today,
+        "region": user.get("region", "general"),
+        "tipo_caja": "regional" if is_regional else "personal",
+        "usuario_id": user["sub"],
+        "usuario_nombre": user["nombre"],
+        "total_cobrado": total_cobrado,
+        "numero_pagos": len(payments),
+        "estatus": "abierto",
+        "pagos": payments,
+        "asesores_detalle": asesores_detalle if is_regional else None
+    }
+    
+    return cashbox
+
+@api_router.get("/cashbox/regional")
+async def get_regional_cashbox(user: dict = Depends(get_current_user)):
+    """Obtener resumen de caja regional con detalle por asesor"""
+    check_role(user, ["desarrollador", "administrador", "gerente_regional", "supervisor"])
+    
+    today = datetime.now(timezone.utc).strftime("%Y-%m-%d")
+    today_start = datetime.strptime(today, "%Y-%m-%d").replace(tzinfo=timezone.utc)
+    today_end = today_start + timedelta(days=1)
+    
+    # Obtener asesores según rol
+    if user["rol"] == "supervisor":
+        asesores = await db.users.find({"supervisor_id": user["sub"], "rol": "asesor", "activo": True}, {"_id": 0}).to_list(100)
+    elif user["rol"] == "gerente_regional":
+        asesores = await db.users.find({"region": user["region"], "rol": "asesor", "activo": True}, {"_id": 0}).to_list(100)
+    else:
+        asesores = await db.users.find({"rol": "asesor", "activo": True}, {"_id": 0}).to_list(100)
+    
+    cajas_asesores = []
+    total_regional = 0
+    total_pagos = 0
+    
+    for asesor in asesores:
         payments = await db.payments.find({
-            **payments_query,
+            "registrado_por": asesor["id"],
             "fecha_pago": {"$gte": today_start.isoformat(), "$lt": today_end.isoformat()}
         }, {"_id": 0}).to_list(1000)
         
-        total_cobrado = sum(p["monto"] for p in payments)
+        asesor_total = sum(p["monto"] for p in payments)
+        total_regional += asesor_total
+        total_pagos += len(payments)
         
-        cashbox = {
-            "id": str(uuid.uuid4()),
-            "fecha": today,
-            "region": user.get("region", "general"),
-            "asesor_id": user["sub"] if user["rol"] == "asesor" else None,
-            "asesor_nombre": user["nombre"] if user["rol"] == "asesor" else "Regional",
-            "total_cobrado": total_cobrado,
+        cajas_asesores.append({
+            "asesor_id": asesor["id"],
+            "asesor_nombre": asesor["nombre_completo"],
+            "total_cobrado": asesor_total,
             "numero_pagos": len(payments),
-            "estatus": "abierto",
-            "pagos": payments
-        }
+            "supervisor_id": asesor.get("supervisor_id")
+        })
     
-    return cashbox
+    return {
+        "fecha": today,
+        "region": user.get("region", "todas"),
+        "total_regional": total_regional,
+        "total_pagos": total_pagos,
+        "asesores": cajas_asesores
+    }
 
 @api_router.post("/cashbox/close")
 async def close_cashbox(data: CashBoxCreate, user: dict = Depends(get_current_user)):
