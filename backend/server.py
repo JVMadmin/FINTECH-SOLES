@@ -1335,8 +1335,25 @@ async def get_logs(
 # ============== REGIONS ROUTES ==============
 @api_router.get("/regions")
 async def get_regions():
-    """Obtener lista de regiones"""
-    return REGIONS
+    """Obtener lista de regiones/localidades"""
+    return LOCALIDADES
+
+@api_router.get("/regions/structure")
+async def get_regions_structure():
+    """Obtener estructura jerárquica de regiones"""
+    return {
+        "sedes": REGIONS_STRUCTURE,
+        "localidades": LOCALIDADES,
+        "detalle": [
+            {"id": "yajalon", "nombre": "Yajalón", "tipo": "sede_regional", "numero_region": 3},
+            {"id": "chilon", "nombre": "Chilón", "tipo": "comunidad", "sede": "yajalon"},
+            {"id": "bachajon", "nombre": "Bachajón", "tipo": "comunidad", "sede": "yajalon"},
+            {"id": "temo", "nombre": "Temo", "tipo": "comunidad", "sede": "yajalon"},
+            {"id": "petalcingo", "nombre": "Petalcingo", "tipo": "comunidad", "sede": "yajalon"},
+            {"id": "tumbala", "nombre": "Tumbalá", "tipo": "comunidad", "sede": "yajalon"},
+            {"id": "tila", "nombre": "Tila", "tipo": "comunidad", "sede": "yajalon"}
+        ]
+    }
 
 @api_router.get("/roles")
 async def get_roles():
