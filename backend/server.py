@@ -243,6 +243,37 @@ class AssignCarteraRequest(BaseModel):
     cliente_ids: List[str]
     asesor_id: str
 
+class DisbursementRequest(BaseModel):
+    """Solicitud de desembolso programado"""
+    cliente_id: str
+    monto: float
+    tipo_credito: str  # diario, semanal, catorcenal
+    plazo: int
+    fecha_desembolso: str  # YYYY-MM-DD
+    es_renovacion: bool = False
+    credito_anterior_id: Optional[str] = None
+    notas: Optional[str] = None
+
+class DisbursementResponse(BaseModel):
+    model_config = ConfigDict(extra="ignore")
+    id: str
+    cliente_id: str
+    cliente_nombre: str
+    monto: float
+    tipo_credito: str
+    plazo: int
+    fecha_desembolso: str
+    es_renovacion: bool
+    estatus: str  # pendiente, aprobado, rechazado, ejecutado
+    solicitado_por: str
+    solicitado_por_nombre: str
+    fecha_solicitud: str
+    revisado_por: Optional[str] = None
+    revisado_por_nombre: Optional[str] = None
+    fecha_revision: Optional[str] = None
+    notas: Optional[str] = None
+    motivo_rechazo: Optional[str] = None
+
 class AlertResponse(BaseModel):
     model_config = ConfigDict(extra="ignore")
     tipo: str  # pago_hoy, atrasado, por_vencer
