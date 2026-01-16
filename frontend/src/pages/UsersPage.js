@@ -432,7 +432,7 @@ export default function UsersPage() {
                 <TableHead>Usuario</TableHead>
                 <TableHead>Nombre</TableHead>
                 <TableHead>Rol</TableHead>
-                <TableHead>Región</TableHead>
+                <TableHead>Localidad</TableHead>
                 <TableHead>Estado</TableHead>
                 <TableHead className="text-right">Acciones</TableHead>
               </TableRow>
@@ -463,7 +463,14 @@ export default function UsersPage() {
                     </TableCell>
                     <TableCell className="font-medium">{u.nombre_completo}</TableCell>
                     <TableCell>{getRoleBadge(u.rol)}</TableCell>
-                    <TableCell className="capitalize">{u.region || "-"}</TableCell>
+                    <TableCell>
+                      {u.region ? (
+                        <Badge variant="outline" className="text-xs">
+                          <MapPin className="w-3 h-3 mr-1" />
+                          {getLocalidadName(u.region)}
+                        </Badge>
+                      ) : "-"}
+                    </TableCell>
                     <TableCell>
                       {u.activo ? (
                         <Badge className="bg-green-100 text-green-800">Activo</Badge>
@@ -472,20 +479,43 @@ export default function UsersPage() {
                       )}
                     </TableCell>
                     <TableCell className="text-right">
-                      {hasRole(["desarrollador", "administrador"]) && u.id !== user?.id && (
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          onClick={() => handleToggleActive(u.id, u.activo)}
-                          data-testid={`toggle-user-${u.id}`}
-                        >
-                          {u.activo ? (
-                            <Ban className="w-4 h-4 text-red-500" />
-                          ) : (
-                            <Check className="w-4 h-4 text-green-500" />
-                          )}
-                        </Button>
-                      )}
+                      <div className="flex items-center justify-end gap-1">
+                        {canEditUser(u) && (
+                          <>
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              onClick={() => handleOpenEdit(u)}
+                              title="Editar usuario"
+                              data-testid={`edit-user-${u.id}`}
+                            >
+                              <Edit className="w-4 h-4 text-blue-500" />
+                            </Button>
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              onClick={() => handleOpenPasswordChange(u)}
+                              title="Cambiar contraseña"
+                              data-testid={`password-user-${u.id}`}
+                            >
+                              <Key className="w-4 h-4 text-yellow-600" />
+                            </Button>
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              onClick={() => handleToggleActive(u.id, u.activo)}
+                              title={u.activo ? "Desactivar" : "Activar"}
+                              data-testid={`toggle-user-${u.id}`}
+                            >
+                              {u.activo ? (
+                                <Ban className="w-4 h-4 text-red-500" />
+                              ) : (
+                                <Check className="w-4 h-4 text-green-500" />
+                              )}
+                            </Button>
+                          </>
+                        )}
+                      </div>
                     </TableCell>
                   </TableRow>
                 ))
