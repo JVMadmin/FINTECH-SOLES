@@ -45,6 +45,9 @@ import {
   Camera,
   MapPin,
   Phone,
+  Navigation,
+  CalendarDays,
+  CalendarRange,
 } from "lucide-react";
 import { toast } from "sonner";
 
