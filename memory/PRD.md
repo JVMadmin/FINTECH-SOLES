@@ -1,8 +1,8 @@
 # SOLES CORPORATIVO - Sistema de Créditos
 ## Product Requirements Document
 
-### Fecha de Actualización: 2025-01-15
-### Version: 1.1
+### Fecha de Actualización: 2025-01-16
+### Version: 1.2
 
 ---
 
@@ -11,15 +11,30 @@ Sistema financiero integral para SOLES CORPORATIVO – CRÉDITOS. Sistema de adm
 
 ---
 
+## Estructura de Región
+
+### Región 3 - Yajalón (Sede Regional)
+| Tipo | Localidad |
+|------|-----------|
+| **Sede** | Yajalón |
+| Comunidad | Chilón |
+| Comunidad | Bachajón |
+| Comunidad | Tila |
+| Comunidad | Tumbalá |
+| Comunidad | Petalcingo |
+| Comunidad | Temo |
+
+---
+
 ## Usuarios y Roles (RBAC)
 
 | Rol | Permisos |
 |-----|----------|
 | **Desarrollador** | Acceso total al sistema, configuración, logs |
-| **Administrador** | Gestión de usuarios, reportes globales |
-| **Gerente Regional** | Autoriza créditos, ve cartera regional, asigna supervisores |
-| **Supervisor** | Asigna cartera a asesores, valida información, asigna asesores a su equipo |
-| **Asesor de Crédito** | Alta clientes, registra pagos, ve su caja personal |
+| **Administrador** | Gestión de usuarios (editar/eliminar/contraseña), reportes globales, filtros avanzados |
+| **Gerente Regional** | Autoriza créditos, ve cartera regional, asigna supervisores, edita usuarios de su región |
+| **Supervisor** | Asigna cartera a asesores, autoriza créditos, **registra pagos**, edita asesores de su equipo |
+| **Asesor de Crédito** | Alta clientes, **registra pagos**, ve su caja personal |
 
 ---
 
@@ -28,15 +43,18 @@ Sistema financiero integral para SOLES CORPORATIVO – CRÉDITOS. Sistema de adm
 ### ✅ Autenticación y Usuarios
 - Login con usuario/contraseña (JWT)
 - Roles RBAC con permisos estrictos
-- Creación de usuarios limitada por región/rol
-- Usuarios de prueba: developer/developer123, admin/admin123, gerente_yajalon/gerente123
+- **Gestión de usuarios mejorada:**
+  - Admin/Gerente/Supervisor pueden editar usuarios de su ámbito
+  - Cambio de contraseña por administradores
+  - Activar/desactivar usuarios
+- Usuarios de prueba: developer/developer123, admin/admin123, gerente_yajalon/gerente123, supervisor_yajalon/supervisor123
 
 ### ✅ Gestión de Clientes
 - Alta de clientes con datos básicos
 - Referencias personales (nombre, teléfono, relación)
 - Evidencias obligatorias (fotos cliente/domicilio/negocio)
 - Coordenadas GPS para domicilio y negocio
-- Filtros por región y estatus
+- **Filtros avanzados por localidad y asesor**
 - Estatus: Vigente, Atrasado, Vencido
 
 ### ✅ Gestión de Créditos
@@ -44,46 +62,36 @@ Sistema financiero integral para SOLES CORPORATIVO – CRÉDITOS. Sistema de adm
 - Cálculo automático de calendario de pagos
 - Flujo de autorización: Pendiente → Autorizado → Vigente
 - Supervisores y Gerentes pueden autorizar/rechazar
-- Requiere evidencias completas del cliente
+- **Filtros avanzados por localidad y asesor** (Admin/Gerente)
 
 ### ✅ Sistema de Cobranza
 - Alertas automáticas por estatus
 - Pagos del día, atrasados, próximos a vencer
-- Registro de pagos por asesor
+- **Asesores Y Supervisores pueden registrar pagos**
 - Métodos: efectivo, transferencia, depósito
-- **Flujo "NO PAGO" completo**: 
-  - Motivos: No pagó, No localizado, Promesa de pago, Otro
-  - Fecha de promesa de pago
-  - Carga de evidencia fotográfica
-  - Confirmación antes de registrar
+- Flujo "NO PAGO" completo con evidencia
 
 ### ✅ Asignación de Cartera
 - Solo supervisores pueden asignar clientes
 - Selección múltiple de clientes
 - Limitado a región del supervisor
 
-### ✅ Página de Asignaciones (NUEVO)
+### ✅ Página de Asignaciones
 - Asignación de supervisores a regiones (Admin/Gerente)
 - Asignación de asesores a supervisores
 - Vista de supervisores por región con estado
 - Vista de asesores agrupados por supervisor
-- Lista de asesores sin supervisor asignado
 
 ### ✅ Caja y Cierre
 - **Caja Personal (Asesor)**: Solo pagos registrados por el asesor
 - **Caja Regional (Supervisor)**: Consolidación de pagos de sus asesores
 - Cierre de caja con notas
 - Historial de cierres
-- Total cobrado y pagos registrados
 
 ### ✅ Auditoría
 - Log de todas las acciones del sistema
 - Filtros por entidad y usuario
 - Trazabilidad completa
-
-### ✅ Estructura Jerárquica de Regiones
-- Sede Regional: Yajalón (Región #3)
-- Comunidades subordinadas: Chilón, Bachajón, Temo, Petalcingo, Tumbalá, Tila
 
 ---
 
@@ -92,8 +100,6 @@ Sistema financiero integral para SOLES CORPORATIVO – CRÉDITOS. Sistema de adm
 - **Frontend**: React + TailwindCSS + Shadcn UI
 - **Base de datos**: MongoDB
 - **Autenticación**: JWT
-- **Mapas**: OpenStreetMap (enlaces externos)
-- **Almacenamiento**: Local (con ruta para migrar a cloud)
 
 ---
 
@@ -102,7 +108,6 @@ Sistema financiero integral para SOLES CORPORATIVO – CRÉDITOS. Sistema de adm
 - Fondo gris anti-reflejo para uso en campo
 - Botones grandes (mínimo 48px) para móviles
 - Colores semáforo: Verde=Vigente, Amarillo=Atrasado, Rojo=Vencido
-- Fuentes: Barlow Condensed (headings), Inter (body)
 - Diseño responsive con bottom navigation para móvil
 
 ---
@@ -112,25 +117,23 @@ Sistema financiero integral para SOLES CORPORATIVO – CRÉDITOS. Sistema de adm
 ### P1 (Próximas)
 - Evidencia fotográfica obligatoria al desembolsar crédito
 - Reportes exportables (PDF/Excel)
-- Notificaciones push/email
-- Firma digital de contratos
-- Tickets de pago impresos
 
 ### P2 (Futuro)
-- Integración de mapas (Google Maps/Leaflet) para visualizar clientes
-- Integración WhatsApp automático
+- Integración de mapas (Google Maps/Leaflet)
+- Notificaciones por WhatsApp
+- Firma digital de contratos
+- Tickets de pago impresos
 - Score interno de clientes
-- App móvil nativa
-- Geolocalización en tiempo real
 
 ---
 
 ## Archivos Clave
 - `/app/backend/server.py` - Backend monolito FastAPI
-- `/app/frontend/src/pages/AsignacionesPage.js` - Gestión de asignaciones
+- `/app/frontend/src/pages/UsersPage.js` - Gestión de usuarios con edición/contraseña
+- `/app/frontend/src/pages/CreditsPage.js` - Créditos con filtros avanzados
+- `/app/frontend/src/pages/ClientsPage.js` - Clientes con filtros avanzados
 - `/app/frontend/src/pages/CobranzaPage.js` - Cobranza y flujo NO PAGO
 - `/app/frontend/src/pages/CashboxPage.js` - Caja personal/regional
-- `/app/frontend/src/components/layout/MainLayout.js` - Navegación principal
 
 ---
 
@@ -138,3 +141,15 @@ Sistema financiero integral para SOLES CORPORATIVO – CRÉDITOS. Sistema de adm
 - `developer` / `developer123`
 - `admin` / `admin123`
 - `gerente_yajalon` / `gerente123`
+- `supervisor_yajalon` / `supervisor123`
+
+---
+
+## Changelog
+- **v1.2 (2025-01-16):** 
+  - Supervisores pueden registrar pagos
+  - Admin/Gerente/Supervisor pueden editar/desactivar usuarios y cambiar contraseñas
+  - Filtros avanzados por localidad y asesor en créditos y clientes
+  - Corrección de estructura de localidades
+- **v1.1 (2025-01-15):** Página de Asignaciones añadida al menú
+- **v1.0 (2025-01-14):** MVP inicial con autenticación, clientes, créditos, cobranza
