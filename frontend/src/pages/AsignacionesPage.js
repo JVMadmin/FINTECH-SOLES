@@ -14,6 +14,16 @@ import {
   DialogDescription,
 } from "@/components/ui/dialog";
 import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
+import {
   Select,
   SelectContent,
   SelectItem,
@@ -35,6 +45,9 @@ import {
   Link as LinkIcon,
   Plus,
   Building,
+  Wand2,
+  RefreshCw,
+  Shuffle,
 } from "lucide-react";
 import { toast } from "sonner";
 
@@ -57,6 +70,8 @@ export default function AsignacionesPage() {
   const [myAsesores, setMyAsesores] = useState([]);
   const [allUsers, setAllUsers] = useState([]);
   const [isLoading, setIsLoading] = useState(true);
+  const [isAutoAssigning, setIsAutoAssigning] = useState(false);
+  const [showAutoAssignDialog, setShowAutoAssignDialog] = useState(false);
   
   // Dialog states
   const [showAssignSupervisorDialog, setShowAssignSupervisorDialog] = useState(false);
@@ -151,6 +166,27 @@ export default function AsignacionesPage() {
     }
   };
 
+  const handleAutoAssign = async () => {
+    setIsAutoAssigning(true);
+    try {
+      const response = await axios.post(`${API}/users/auto-assign-region`);
+      const { total_asignados, asignaciones } = response.data;
+      
+      if (total_asignados > 0) {
+        toast.success(`Se asignaron ${total_asignados} asesores automáticamente`);
+      } else {
+        toast.info("No hay asesores pendientes de asignar en las regiones con supervisores");
+      }
+      
+      setShowAutoAssignDialog(false);
+      fetchData();
+    } catch (error) {
+      toast.error(error.response?.data?.detail || "Error en la asignación automática");
+    } finally {
+      setIsAutoAssigning(false);
+    }
+  };
+
   const getRegionName = (regionId) => {
     const region = REGIONS.find(r => r.id === regionId);
     return region ? region.nombre : regionId || "Sin asignar";
@@ -177,7 +213,65 @@ export default function AsignacionesPage() {
             Gestión de supervisores y asesores por región
           </p>
         </div>
+        
+        {/* Auto-assign button for admins */}
+        {hasRole(["desarrollador", "administrador", "gerente_regional"]) && unassignedAsesores.length > 0 && (
+          <Button 
+            onClick={() => setShowAutoAssignDialog(true)}
+            className="bg-gradient-to-r from-purple-600 to-blue-600 hover:from-purple-700 hover:to-blue-700"
+            data-testid="auto-assign-btn"
+          >
+            <Wand2 className="w-4 h-4 mr-2" />
+            Asignación Automática
+          </Button>
+        )}
       </div>
+
+      {/* Auto-assign confirmation dialog */}
+      <AlertDialog open={showAutoAssignDialog} onOpenChange={setShowAutoAssignDialog}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle className="flex items-center gap-2">
+              <Shuffle className="w-5 h-5 text-purple-600" />
+              Asignación Automática por Región
+            </AlertDialogTitle>
+            <AlertDialogDescription>
+              <p className="mb-4">
+                Esta acción asignará automáticamente a todos los asesores sin supervisor 
+                al supervisor de su misma región.
+              </p>
+              <div className="p-4 bg-purple-50 rounded-lg border border-purple-200">
+                <p className="text-sm text-purple-800">
+                  <strong>{unassignedAsesores.length}</strong> asesores pendientes de asignar
+                </p>
+                <p className="text-xs text-purple-600 mt-1">
+                  Solo se asignarán los asesores cuya región coincida con la de un supervisor activo
+                </p>
+              </div>
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel disabled={isAutoAssigning}>Cancelar</AlertDialogCancel>
+            <AlertDialogAction 
+              onClick={handleAutoAssign}
+              disabled={isAutoAssigning}
+              className="bg-purple-600 hover:bg-purple-700"
+            >
+              {isAutoAssigning ? (
+                <>
+                  <RefreshCw className="w-4 h-4 mr-2 animate-spin" />
+                  Asignando...
+                </>
+              ) : (
+                <>
+                  <Wand2 className="w-4 h-4 mr-2" />
+                  Ejecutar Asignación
+                </>
+              )}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
 
       {/* Asignar Supervisor a Región - Solo para Gerente/Admin/Dev */}
       {hasRole(["desarrollador", "administrador", "gerente_regional"]) && (
