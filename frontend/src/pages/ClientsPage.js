@@ -359,17 +359,20 @@ export default function ClientsPage() {
                       </div>
                       <div className="flex items-center gap-2 text-sm text-gray-500 mb-1">
                         <Phone className="w-3 h-3" />
-                        <a
-                          href={`tel:${client.telefono}`}
-                          onClick={(e) => e.stopPropagation()}
-                          className="text-blue-600 hover:underline"
+                        <span
+                          onClick={(e) => {
+                            e.preventDefault();
+                            e.stopPropagation();
+                            window.location.href = `tel:${client.telefono}`;
+                          }}
+                          className="text-blue-600 hover:underline cursor-pointer"
                         >
                           {client.telefono}
-                        </a>
+                        </span>
                       </div>
                       <div className="flex items-center gap-2 text-sm text-gray-500">
                         <MapPin className="w-3 h-3" />
-                        <span className="capitalize">{client.region}</span>
+                        <span className="capitalize">{getLocalidadName(client.region)}</span>
                       </div>
                     </div>
                     <Eye className="w-5 h-5 text-gray-400" />
