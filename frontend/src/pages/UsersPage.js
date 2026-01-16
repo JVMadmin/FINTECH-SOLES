@@ -160,6 +160,95 @@ export default function UsersPage() {
     }
   };
 
+  const handleOpenEdit = (userToEdit) => {
+    setSelectedUser(userToEdit);
+    setEditUser({
+      nombre_completo: userToEdit.nombre_completo,
+      telefono: userToEdit.telefono || "",
+      region: userToEdit.region || "",
+    });
+    setIsEditDialogOpen(true);
+  };
+
+  const handleSaveEdit = async () => {
+    try {
+      await axios.put(`${API}/users/${selectedUser.id}`, editUser);
+      toast.success("Usuario actualizado");
+      setIsEditDialogOpen(false);
+      setSelectedUser(null);
+      fetchUsers();
+    } catch (error) {
+      toast.error(error.response?.data?.detail || "Error al actualizar usuario");
+    }
+  };
+
+  const handleOpenPasswordChange = (userToEdit) => {
+    setSelectedUser(userToEdit);
+    setNewPassword("");
+    setIsPasswordDialogOpen(true);
+  };
+
+  const handleChangePassword = async () => {
+    if (!newPassword || newPassword.length < 6) {
+      toast.error("La contraseña debe tener al menos 6 caracteres");
+      return;
+    }
+    try {
+      await axios.put(`${API}/users/${selectedUser.id}`, { password: newPassword });
+      toast.success("Contraseña actualizada");
+      setIsPasswordDialogOpen(false);
+      setSelectedUser(null);
+      setNewPassword("");
+    } catch (error) {
+      toast.error(error.response?.data?.detail || "Error al cambiar contraseña");
+    }
+  };
+
+  const handleOpenDelete = (userToDelete) => {
+    setSelectedUser(userToDelete);
+    setIsDeleteDialogOpen(true);
+  };
+
+  const handleDeleteUser = async () => {
+    try {
+      await axios.delete(`${API}/users/${selectedUser.id}`);
+      toast.success("Usuario eliminado");
+      setIsDeleteDialogOpen(false);
+      setSelectedUser(null);
+      fetchUsers();
+    } catch (error) {
+      toast.error(error.response?.data?.detail || "Error al eliminar usuario");
+    }
+  };
+
+  const canEditUser = (targetUser) => {
+    // No puede editarse a sí mismo desde aquí
+    if (targetUser.id === user?.id) return false;
+    
+    // Desarrollador puede editar a todos
+    if (hasRole("desarrollador")) return true;
+    
+    // Admin puede editar a todos menos desarrolladores
+    if (hasRole("administrador") && targetUser.rol !== "desarrollador") return true;
+    
+    // Gerente regional puede editar supervisores y asesores de su región
+    if (hasRole("gerente_regional") && 
+        ["supervisor", "asesor"].includes(targetUser.rol) && 
+        targetUser.region === user?.region) return true;
+    
+    // Supervisor puede editar asesores de su equipo
+    if (hasRole("supervisor") && 
+        targetUser.rol === "asesor" && 
+        targetUser.supervisor_id === user?.id) return true;
+    
+    return false;
+  };
+
+  const getLocalidadName = (id) => {
+    const loc = LOCALIDADES.find(l => l.id === id);
+    return loc ? loc.nombre : id || "-";
+  };
+
   const getRoleBadge = (rol) => {
     const roleConfig = ROLES.find((r) => r.value === rol);
     return (
