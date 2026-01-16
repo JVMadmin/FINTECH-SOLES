@@ -26,6 +26,7 @@ import {
   History,
   MapPin,
   Home,
+  Banknote,
 } from "lucide-react";
 
 const LOGO_URL = "https://customer-assets.emergentagent.com/job_fintech-soles/artifacts/2td609sq_506457094_29841105905504484_1973994614841110561_n.png";
