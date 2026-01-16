@@ -43,6 +43,8 @@ import {
   Clock,
   CheckCircle,
   AlertTriangle,
+  MapPin,
+  User,
 } from "lucide-react";
 import { toast } from "sonner";
 
@@ -54,16 +56,29 @@ const CREDIT_TYPES = [
   { value: "catorcenal", label: "Catorcenal" },
 ];
 
+const LOCALIDADES = [
+  { id: "yajalon", nombre: "Yajalón (Sede Regional #3)", tipo: "sede" },
+  { id: "chilon", nombre: "Chilón", tipo: "comunidad" },
+  { id: "bachajon", nombre: "Bachajón", tipo: "comunidad" },
+  { id: "temo", nombre: "Temo", tipo: "comunidad" },
+  { id: "petalcingo", nombre: "Petalcingo", tipo: "comunidad" },
+  { id: "tumbala", nombre: "Tumbalá", tipo: "comunidad" },
+  { id: "tila", nombre: "Tila", tipo: "comunidad" },
+];
+
 export default function CreditsPage() {
   const { user, hasRole } = useAuth();
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
   const [credits, setCredits] = useState([]);
   const [clients, setClients] = useState([]);
+  const [asesores, setAsesores] = useState([]);
   const [isLoading, setIsLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState("");
   const [filterEstatus, setFilterEstatus] = useState(searchParams.get("estatus") || "");
   const [filterTipo, setFilterTipo] = useState("");
+  const [filterLocalidad, setFilterLocalidad] = useState("");
+  const [filterAsesor, setFilterAsesor] = useState("");
   const [isDialogOpen, setIsDialogOpen] = useState(searchParams.get("new") === "true");
   const [selectedClientId, setSelectedClientId] = useState(searchParams.get("cliente_id") || "");
   const [newCredit, setNewCredit] = useState({
@@ -78,13 +93,18 @@ export default function CreditsPage() {
   useEffect(() => {
     fetchCredits();
     fetchClients();
-  }, [filterEstatus, filterTipo]);
+    if (hasRole(["desarrollador", "administrador", "gerente_regional", "supervisor"])) {
+      fetchAsesores();
+    }
+  }, [filterEstatus, filterTipo, filterLocalidad, filterAsesor]);
 
   const fetchCredits = async () => {
     try {
       let url = `${API}/credits`;
       const params = new URLSearchParams();
       if (filterEstatus) params.append("estatus", filterEstatus);
+      if (filterLocalidad) params.append("region", filterLocalidad);
+      if (filterAsesor) params.append("asesor_id", filterAsesor);
       if (params.toString()) url += `?${params.toString()}`;
 
       const response = await axios.get(url);
@@ -102,6 +122,15 @@ export default function CreditsPage() {
       setClients(response.data);
     } catch (error) {
       console.error("Error fetching clients:", error);
+    }
+  };
+
+  const fetchAsesores = async () => {
+    try {
+      const response = await axios.get(`${API}/users`);
+      setAsesores(response.data.filter(u => u.rol === "asesor" && u.activo));
+    } catch (error) {
+      console.error("Error fetching asesores:", error);
     }
   };
 
