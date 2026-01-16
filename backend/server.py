@@ -701,6 +701,87 @@ async def get_all_asesores(user: dict = Depends(get_current_user)):
     
     return asesores
 
+@api_router.post("/users/auto-assign-region")
+async def auto_assign_asesores_by_region(user: dict = Depends(get_current_user)):
+    """Asignar automáticamente asesores a supervisores según su región"""
+    check_role(user, ["desarrollador", "administrador", "gerente_regional"])
+    
+    # Determinar región a procesar
+    region_to_process = user.get("region") if user["rol"] == "gerente_regional" else None
+    
+    # Obtener supervisores
+    supervisor_query = {"rol": "supervisor", "activo": True}
+    if region_to_process:
+        supervisor_query["region"] = region_to_process
+    
+    supervisors = await db.users.find(supervisor_query, {"_id": 0}).to_list(100)
+    
+    assignments = []
+    
+    for supervisor in supervisors:
+        sup_region = supervisor.get("region")
+        if not sup_region:
+            continue
+        
+        # Buscar asesores de la misma región sin supervisor asignado
+        asesores_sin_asignar = await db.users.find({
+            "rol": "asesor",
+            "activo": True,
+            "region": sup_region,
+            "$or": [
+                {"supervisor_id": None},
+                {"supervisor_id": {"$exists": False}},
+                {"supervisor_id": ""}
+            ]
+        }, {"_id": 0}).to_list(100)
+        
+        # Asignar cada asesor al supervisor de su región
+        for asesor in asesores_sin_asignar:
+            await db.users.update_one(
+                {"id": asesor["id"]},
+                {"$set": {
+                    "supervisor_id": supervisor["id"],
+                    "supervisor_nombre": supervisor["nombre_completo"],
+                    "updated_at": datetime.now(timezone.utc).isoformat()
+                }}
+            )
+            assignments.append({
+                "asesor": asesor["nombre_completo"],
+                "supervisor": supervisor["nombre_completo"],
+                "region": sup_region
+            })
+    
+    await log_action(user["sub"], user["nombre"], "auto_asignar_region", "usuarios", "batch",
+                    {"asignaciones": len(assignments)})
+    
+    return {
+        "message": f"Se asignaron {len(assignments)} asesores automáticamente",
+        "assignments": assignments
+    }
+
+@api_router.get("/users/unassigned-asesores")
+async def get_unassigned_asesores(user: dict = Depends(get_current_user)):
+    """Obtener asesores sin supervisor asignado"""
+    check_role(user, ["desarrollador", "administrador", "gerente_regional", "supervisor"])
+    
+    query = {
+        "rol": "asesor",
+        "activo": True,
+        "$or": [
+            {"supervisor_id": None},
+            {"supervisor_id": {"$exists": False}},
+            {"supervisor_id": ""}
+        ]
+    }
+    
+    # Filtrar por región si es supervisor o gerente
+    if user["rol"] in ["supervisor", "gerente_regional"]:
+        query["region"] = user["region"]
+    
+    asesores = await db.users.find(query, {"_id": 0, "password": 0}).to_list(100)
+    
+    return asesores
+
 # ============== CLIENT ROUTES ==============
 @api_router.post("/clients", response_model=ClientResponse)
 async def create_client(data: ClientCreate, user: dict = Depends(get_current_user)):
