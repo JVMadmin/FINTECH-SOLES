@@ -17,7 +17,7 @@ BASE_URL = os.environ.get('REACT_APP_BACKEND_URL', 'https://credit-manager-47.pr
 CREDENTIALS = {
     "developer": {"username": "developer", "password": "developer123"},
     "admin": {"username": "admin", "password": "admin123"},
-    "supervisor": {"username": "pedro_supervisor", "password": "password"},
+    "supervisor": {"username": "supervisor_yajalon", "password": "supervisor123"},
 }
 
 
