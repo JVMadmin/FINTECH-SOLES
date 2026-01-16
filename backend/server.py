@@ -582,8 +582,18 @@ async def update_user(user_id: str, data: dict, user: dict = Depends(get_current
     if not existing:
         raise HTTPException(status_code=404, detail="Usuario no encontrado")
     
-    # No permitir cambiar el rol a través de este endpoint
-    if "rol" in data:
+    # Verificar permisos por rol y región
+    if user["rol"] == "supervisor":
+        # Supervisores solo pueden editar asesores de su equipo
+        if existing.get("supervisor_id") != user["sub"]:
+            raise HTTPException(status_code=403, detail="Solo puede editar asesores de su equipo")
+    elif user["rol"] == "gerente_regional":
+        # Gerentes solo pueden editar usuarios de su región
+        if existing.get("region") != user["region"]:
+            raise HTTPException(status_code=403, detail="Solo puede editar usuarios de su región")
+    
+    # No permitir cambiar el rol a través de este endpoint (solo admin/dev)
+    if "rol" in data and user["rol"] not in ["desarrollador", "administrador"]:
         del data["rol"]
     
     if "password" in data and data["password"]:
@@ -595,7 +605,8 @@ async def update_user(user_id: str, data: dict, user: dict = Depends(get_current
     
     await db.users.update_one({"id": user_id}, {"$set": data})
     
-    await log_action(user["sub"], user["nombre"], "actualizar_usuario", "usuario", user_id, data)
+    await log_action(user["sub"], user["nombre"], "actualizar_usuario", "usuario", user_id, 
+                    {k: v for k, v in data.items() if k != "password"})
     
     return {"message": "Usuario actualizado"}
 
@@ -604,9 +615,23 @@ async def deactivate_user(user_id: str, user: dict = Depends(get_current_user)):
     """Desactivar usuario - Admin, Gerente Regional y Supervisor"""
     check_role(user, ["desarrollador", "administrador", "gerente_regional", "supervisor"])
     
-    await db.users.update_one({"id": user_id}, {"$set": {"activo": False}})
+    existing = await db.users.find_one({"id": user_id})
+    if not existing:
+        raise HTTPException(status_code=404, detail="Usuario no encontrado")
     
-    await log_action(user["sub"], user["nombre"], "desactivar_usuario", "usuario", user_id, {})
+    # Verificar permisos por rol y región
+    if user["rol"] == "supervisor":
+        # Supervisores solo pueden desactivar asesores de su equipo
+        if existing.get("supervisor_id") != user["sub"]:
+            raise HTTPException(status_code=403, detail="Solo puede desactivar asesores de su equipo")
+    elif user["rol"] == "gerente_regional":
+        # Gerentes solo pueden desactivar usuarios de su región
+        if existing.get("region") != user["region"]:
+            raise HTTPException(status_code=403, detail="Solo puede desactivar usuarios de su región")
+    
+    await db.users.update_one({"id": user_id}, {"$set": {"activo": False, "updated_at": datetime.now(timezone.utc).isoformat()}})
+    
+    await log_action(user["sub"], user["nombre"], "desactivar_usuario", "usuario", user_id, {"usuario": existing.get("nombre_completo")})
     
     return {"message": "Usuario desactivado"}
 
