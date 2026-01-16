@@ -332,7 +332,7 @@ export default function CobranzaPage() {
       </div>
 
       {/* Summary Cards */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+      <div className="grid grid-cols-2 md:grid-cols-5 gap-4">
         <Card className="border-l-4 border-l-blue-500" data-testid="summary-hoy">
           <CardContent className="p-4">
             <div className="flex items-center justify-between">
@@ -349,7 +349,7 @@ export default function CobranzaPage() {
           <CardContent className="p-4">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-sm text-gray-500">Pagos Atrasados</p>
+                <p className="text-sm text-gray-500">Atrasados</p>
                 <p className="font-heading text-2xl font-bold text-red-600">{alertsAtrasados.length}</p>
               </div>
               <AlertTriangle className="w-8 h-8 text-red-500" />
@@ -357,14 +357,38 @@ export default function CobranzaPage() {
           </CardContent>
         </Card>
 
-        <Card className="border-l-4 border-l-yellow-500" data-testid="summary-proximos">
+        <Card className="border-l-4 border-l-yellow-500" data-testid="summary-diarios">
           <CardContent className="p-4">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-sm text-gray-500">Próximos a Vencer</p>
-                <p className="font-heading text-2xl font-bold">{alertsPorVencer.length}</p>
+                <p className="text-sm text-gray-500">Por Vencer (Diarios)</p>
+                <p className="font-heading text-2xl font-bold">{alertsDiarios.length}</p>
               </div>
               <Calendar className="w-8 h-8 text-yellow-500" />
+            </div>
+          </CardContent>
+        </Card>
+
+        <Card className="border-l-4 border-l-purple-500" data-testid="summary-semanales">
+          <CardContent className="p-4">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-sm text-gray-500">Semanales</p>
+                <p className="font-heading text-2xl font-bold text-purple-600">{alertsSemanales.length}</p>
+              </div>
+              <CalendarDays className="w-8 h-8 text-purple-500" />
+            </div>
+          </CardContent>
+        </Card>
+
+        <Card className="border-l-4 border-l-indigo-500" data-testid="summary-catorcenales">
+          <CardContent className="p-4">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-sm text-gray-500">Catorcenales</p>
+                <p className="font-heading text-2xl font-bold text-indigo-600">{alertsCatorcenales.length}</p>
+              </div>
+              <CalendarRange className="w-8 h-8 text-indigo-500" />
             </div>
           </CardContent>
         </Card>
