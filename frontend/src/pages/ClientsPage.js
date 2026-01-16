@@ -437,7 +437,12 @@ export default function ClientsPage() {
                         {client.telefono}
                       </a>
                     </TableCell>
-                    <TableCell className="capitalize">{client.region}</TableCell>
+                    <TableCell>
+                      <Badge variant="outline" className="text-xs">
+                        <MapPin className="w-3 h-3 mr-1" />
+                        {getLocalidadName(client.region)}
+                      </Badge>
+                    </TableCell>
                     <TableCell>{client.asesor_nombre || "-"}</TableCell>
                     <TableCell>{getStatusBadge(client.estatus)}</TableCell>
                     <TableCell className="text-right">
