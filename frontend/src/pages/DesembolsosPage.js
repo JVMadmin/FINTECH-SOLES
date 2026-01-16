@@ -467,6 +467,44 @@ export default function DesembolsosPage() {
                   rows={2}
                 />
               </div>
+
+              {/* Foto de Tarjeta del Cliente */}
+              <div className="space-y-2">
+                <Label className="flex items-center gap-2">
+                  <Camera className="w-4 h-4" />
+                  Foto de Tarjeta del Cliente (opcional)
+                </Label>
+                <div className="border-2 border-dashed border-gray-300 rounded-lg p-4">
+                  {evidenciaTarjeta ? (
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center gap-2">
+                        <Image className="w-5 h-5 text-green-600" />
+                        <span className="text-sm text-green-600">{evidenciaTarjeta.name}</span>
+                      </div>
+                      <Button
+                        type="button"
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => setEvidenciaTarjeta(null)}
+                      >
+                        <XCircle className="w-4 h-4 text-red-500" />
+                      </Button>
+                    </div>
+                  ) : (
+                    <label className="flex flex-col items-center cursor-pointer">
+                      <Upload className="w-8 h-8 text-gray-400 mb-2" />
+                      <span className="text-sm text-gray-500">Clic para subir foto</span>
+                      <input
+                        type="file"
+                        accept="image/*"
+                        capture="environment"
+                        className="hidden"
+                        onChange={(e) => setEvidenciaTarjeta(e.target.files[0])}
+                      />
+                    </label>
+                  )}
+                </div>
+              </div>
             </div>
             <DialogFooter>
               <Button variant="outline" onClick={() => setIsDialogOpen(false)}>
