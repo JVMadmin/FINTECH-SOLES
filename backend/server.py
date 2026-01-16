@@ -575,7 +575,8 @@ async def get_supervisors_by_region(region: str, user: dict = Depends(get_curren
 
 @api_router.put("/users/{user_id}")
 async def update_user(user_id: str, data: dict, user: dict = Depends(get_current_user)):
-    check_role(user, ["desarrollador", "administrador"])
+    """Actualizar usuario - Admin, Gerente Regional y Supervisor"""
+    check_role(user, ["desarrollador", "administrador", "gerente_regional", "supervisor"])
     
     existing = await db.users.find_one({"id": user_id})
     if not existing:
@@ -600,7 +601,8 @@ async def update_user(user_id: str, data: dict, user: dict = Depends(get_current
 
 @api_router.delete("/users/{user_id}")
 async def deactivate_user(user_id: str, user: dict = Depends(get_current_user)):
-    check_role(user, ["desarrollador", "administrador"])
+    """Desactivar usuario - Admin, Gerente Regional y Supervisor"""
+    check_role(user, ["desarrollador", "administrador", "gerente_regional", "supervisor"])
     
     await db.users.update_one({"id": user_id}, {"$set": {"activo": False}})
     
@@ -1006,8 +1008,8 @@ async def activate_credit(credit_id: str, data: ActivateCreditRequest, user: dic
 # ============== PAYMENT ROUTES ==============
 @api_router.post("/payments", response_model=PaymentResponse)
 async def create_payment(data: PaymentCreate, user: dict = Depends(get_current_user)):
-    """Registrar un pago - Solo Asesor"""
-    check_role(user, ["desarrollador", "administrador", "asesor"])
+    """Registrar un pago - Asesor y Supervisor"""
+    check_role(user, ["desarrollador", "administrador", "gerente_regional", "supervisor", "asesor"])
     
     credit = await db.credits.find_one({"id": data.credito_id}, {"_id": 0})
     if not credit:
@@ -1101,8 +1103,8 @@ async def get_payments(
 # ============== NO PAYMENT (INCIDENCIAS) ROUTES ==============
 @api_router.post("/no-payments", response_model=NoPaymentResponse)
 async def register_no_payment(data: NoPaymentCreate, user: dict = Depends(get_current_user)):
-    """Registrar incidencia de no pago - Asesor"""
-    check_role(user, ["desarrollador", "administrador", "asesor"])
+    """Registrar incidencia de no pago - Asesor y Supervisor"""
+    check_role(user, ["desarrollador", "administrador", "gerente_regional", "supervisor", "asesor"])
     
     if data.motivo not in NO_PAYMENT_REASONS:
         raise HTTPException(status_code=400, detail=f"Motivo inválido. Opciones: {NO_PAYMENT_REASONS}")
