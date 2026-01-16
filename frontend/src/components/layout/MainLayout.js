@@ -77,7 +77,13 @@ const MainLayout = ({ children }) => {
       label: "Caja",
       icon: Receipt,
       path: "/cashbox",
-      roles: ["desarrollador", "administrador", "gerente_regional", "asesor"],
+      roles: ["desarrollador", "administrador", "gerente_regional", "supervisor", "asesor"],
+    },
+    {
+      label: "Desembolsos",
+      icon: Banknote,
+      path: "/desembolsos",
+      roles: ["desarrollador", "administrador", "gerente_regional", "supervisor", "asesor"],
     },
     {
       label: "Usuarios",
