@@ -150,6 +150,26 @@ export default function DesembolsosPage() {
     }
   };
 
+  const handleFileUpload = async (file, type) => {
+    if (!file) return null;
+    
+    setIsUploading(true);
+    const formData = new FormData();
+    formData.append("file", file);
+    
+    try {
+      const response = await axios.post(`${API}/upload`, formData, {
+        headers: { "Content-Type": "multipart/form-data" }
+      });
+      return response.data.url;
+    } catch (error) {
+      toast.error("Error al subir imagen");
+      return null;
+    } finally {
+      setIsUploading(false);
+    }
+  };
+
   const handleSubmit = async () => {
     if (!newDisbursement.cliente_id || !newDisbursement.monto || !newDisbursement.plazo || !newDisbursement.fecha_desembolso) {
       toast.error("Complete todos los campos requeridos");
@@ -157,10 +177,17 @@ export default function DesembolsosPage() {
     }
 
     try {
+      // Subir evidencia de tarjeta si existe
+      let evidenciaTarjetaUrl = newDisbursement.evidencia_tarjeta_url;
+      if (evidenciaTarjeta) {
+        evidenciaTarjetaUrl = await handleFileUpload(evidenciaTarjeta, "tarjeta");
+      }
+
       await axios.post(`${API}/disbursements`, {
         ...newDisbursement,
         monto: parseFloat(newDisbursement.monto),
         plazo: parseInt(newDisbursement.plazo),
+        evidencia_tarjeta_url: evidenciaTarjetaUrl,
       });
       toast.success("Solicitud de desembolso creada");
       setIsDialogOpen(false);
@@ -173,7 +200,9 @@ export default function DesembolsosPage() {
         es_renovacion: false,
         credito_anterior_id: "",
         notas: "",
+        evidencia_tarjeta_url: "",
       });
+      setEvidenciaTarjeta(null);
       fetchData();
     } catch (error) {
       toast.error(error.response?.data?.detail || "Error al crear solicitud");
