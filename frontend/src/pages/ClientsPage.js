@@ -253,51 +253,79 @@ export default function ClientsPage() {
       {/* Filters */}
       <Card>
         <CardContent className="p-4">
-          <div className="flex flex-col md:flex-row gap-4">
-            <div className="flex-1 relative">
-              <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
-              <Input
-                placeholder="Buscar por nombre o teléfono..."
-                value={searchTerm}
-                onChange={(e) => setSearchTerm(e.target.value)}
-                className="pl-10"
-                data-testid="search-clients"
-              />
-            </div>
-            
-            {!hasRole(["asesor", "supervisor", "gerente_regional"]) && (
-              <Select value={filterRegion || "all"} onValueChange={(v) => setFilterRegion(v === "all" ? "" : v)}>
-                <SelectTrigger className="w-full md:w-48" data-testid="filter-region">
-                  <SelectValue placeholder="Todas las regiones" />
+          <div className="flex flex-col gap-4">
+            <div className="flex flex-col md:flex-row gap-4">
+              <div className="flex-1 relative">
+                <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
+                <Input
+                  placeholder="Buscar por nombre o teléfono..."
+                  value={searchTerm}
+                  onChange={(e) => setSearchTerm(e.target.value)}
+                  className="pl-10"
+                  data-testid="search-clients"
+                />
+              </div>
+
+              <Select value={filterEstatus || "all"} onValueChange={(v) => setFilterEstatus(v === "all" ? "" : v)}>
+                <SelectTrigger className="w-full md:w-40" data-testid="filter-status">
+                  <SelectValue placeholder="Todos los estatus" />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="all">Todas las regiones</SelectItem>
-                  {REGIONS.map((region) => (
-                    <SelectItem key={region.id} value={region.id}>
-                      {region.nombre}
-                    </SelectItem>
-                  ))}
+                  <SelectItem value="all">Todos los estatus</SelectItem>
+                  <SelectItem value="vigente">Vigente</SelectItem>
+                  <SelectItem value="atrasado">Atrasado</SelectItem>
+                  <SelectItem value="vencido">Vencido</SelectItem>
                 </SelectContent>
               </Select>
+            </div>
+
+            {/* Filtros adicionales para Admin/Gerente/Supervisor */}
+            {hasRole(["desarrollador", "administrador", "gerente_regional", "supervisor"]) && (
+              <div className="flex flex-col md:flex-row gap-4 pt-2 border-t border-gray-100">
+                <div className="flex items-center gap-2 text-sm text-gray-500">
+                  <Filter className="w-4 h-4" />
+                  <span>Filtros avanzados:</span>
+                </div>
+                
+                <Select value={filterLocalidad || "all"} onValueChange={(v) => setFilterLocalidad(v === "all" ? "" : v)}>
+                  <SelectTrigger className="w-full md:w-52" data-testid="filter-localidad">
+                    <MapPin className="w-4 h-4 mr-2 text-gray-400" />
+                    <SelectValue placeholder="Todas las localidades" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">Todas las localidades</SelectItem>
+                    {LOCALIDADES.map((loc) => (
+                      <SelectItem key={loc.id} value={loc.id}>
+                        {loc.tipo === "sede" ? "📍 " : "  • "}{loc.nombre}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+
+                <Select value={filterAsesor || "all"} onValueChange={(v) => setFilterAsesor(v === "all" ? "" : v)}>
+                  <SelectTrigger className="w-full md:w-52" data-testid="filter-asesor">
+                    <User className="w-4 h-4 mr-2 text-gray-400" />
+                    <SelectValue placeholder="Todos los asesores" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">Todos los asesores</SelectItem>
+                    {asesores.map((asesor) => (
+                      <SelectItem key={asesor.id} value={asesor.id}>
+                        {asesor.nombre_completo}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
             )}
 
-            <Select value={filterEstatus || "all"} onValueChange={(v) => setFilterEstatus(v === "all" ? "" : v)}>
-              <SelectTrigger className="w-full md:w-40" data-testid="filter-status">
-                <SelectValue placeholder="Todos los estatus" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">Todos</SelectItem>
-                <SelectItem value="vigente">Vigente</SelectItem>
-                <SelectItem value="atrasado">Atrasado</SelectItem>
-                <SelectItem value="vencido">Vencido</SelectItem>
-              </SelectContent>
-            </Select>
-
-            {(filterRegion || filterEstatus || searchTerm) && (
-              <Button variant="ghost" onClick={clearFilters}>
-                <X className="w-4 h-4 mr-1" />
-                Limpiar
-              </Button>
+            {(filterLocalidad || filterEstatus || filterAsesor || searchTerm) && (
+              <div className="flex justify-end">
+                <Button variant="ghost" size="sm" onClick={clearFilters}>
+                  <X className="w-4 h-4 mr-1" />
+                  Limpiar filtros
+                </Button>
+              </div>
             )}
           </div>
         </CardContent>
