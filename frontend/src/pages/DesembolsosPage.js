@@ -61,6 +61,9 @@ import {
   Eye,
   Play,
   AlertTriangle,
+  Camera,
+  Upload,
+  Image,
 } from "lucide-react";
 import { toast } from "sonner";
 
