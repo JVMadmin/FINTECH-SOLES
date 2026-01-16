@@ -253,6 +253,7 @@ class DisbursementRequest(BaseModel):
     es_renovacion: bool = False
     credito_anterior_id: Optional[str] = None
     notas: Optional[str] = None
+    evidencia_tarjeta_url: Optional[str] = None  # Foto de tarjeta del cliente
 
 class DisbursementResponse(BaseModel):
     model_config = ConfigDict(extra="ignore")
@@ -273,6 +274,8 @@ class DisbursementResponse(BaseModel):
     fecha_revision: Optional[str] = None
     notas: Optional[str] = None
     motivo_rechazo: Optional[str] = None
+    evidencia_tarjeta_url: Optional[str] = None
+    evidencia_desembolso_url: Optional[str] = None
 
 class AlertResponse(BaseModel):
     model_config = ConfigDict(extra="ignore")
