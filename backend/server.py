@@ -1231,8 +1231,25 @@ async def get_alerts(user: dict = Depends(get_current_user)):
     
     credits = await db.credits.find(query, {"_id": 0}).to_list(1000)
     
+    # Obtener información de clientes para coordenadas y teléfono
+    client_ids = list(set([c["cliente_id"] for c in credits]))
+    clients_data = {}
+    if client_ids:
+        clients_list = await db.clients.find({"id": {"$in": client_ids}}, {"_id": 0}).to_list(1000)
+        clients_data = {c["id"]: c for c in clients_list}
+    
+    # Obtener información de asesores
+    asesor_ids = list(set([c.get("asesor_id") for c in credits if c.get("asesor_id")]))
+    asesores_data = {}
+    if asesor_ids:
+        asesores_list = await db.users.find({"id": {"$in": asesor_ids}}, {"_id": 0, "id": 1, "nombre_completo": 1}).to_list(100)
+        asesores_data = {a["id"]: a["nombre_completo"] for a in asesores_list}
+    
     alerts = []
     for credit in credits:
+        client = clients_data.get(credit["cliente_id"], {})
+        asesor_nombre = asesores_data.get(credit.get("asesor_id", ""), "")
+        
         for pago in credit.get("calendario_pagos", []):
             if pago["pagado"]:
                 continue
@@ -1241,35 +1258,36 @@ async def get_alerts(user: dict = Depends(get_current_user)):
             today_date = datetime.strptime(today, "%Y-%m-%d")
             dias_diff = (today_date - fecha_pago).days
             
+            alert_data = {
+                "credito_id": credit["id"],
+                "cliente_id": credit["cliente_id"],
+                "cliente_nombre": credit["cliente_nombre"],
+                "monto_pendiente": pago["monto"],
+                "fecha_pago": pago["fecha"],
+                "tipo_credito": credit.get("tipo_credito", "diario"),
+                "cliente_telefono": client.get("telefono", ""),
+                "cliente_direccion": client.get("direccion", ""),
+                "coordenadas_domicilio": client.get("coordenadas_domicilio"),
+                "asesor_nombre": asesor_nombre
+            }
+            
             if pago["fecha"] == today:
                 alerts.append(AlertResponse(
                     tipo="pago_hoy",
-                    credito_id=credit["id"],
-                    cliente_id=credit["cliente_id"],
-                    cliente_nombre=credit["cliente_nombre"],
-                    monto_pendiente=pago["monto"],
-                    fecha_pago=pago["fecha"],
-                    dias_atraso=0
+                    dias_atraso=0,
+                    **alert_data
                 ))
             elif dias_diff > 0:
                 alerts.append(AlertResponse(
                     tipo="atrasado",
-                    credito_id=credit["id"],
-                    cliente_id=credit["cliente_id"],
-                    cliente_nombre=credit["cliente_nombre"],
-                    monto_pendiente=pago["monto"],
-                    fecha_pago=pago["fecha"],
-                    dias_atraso=dias_diff
+                    dias_atraso=dias_diff,
+                    **alert_data
                 ))
-            elif dias_diff >= -3:  # 3 días antes
+            elif dias_diff >= -7:  # 7 días antes para semanales/catorcenales
                 alerts.append(AlertResponse(
                     tipo="por_vencer",
-                    credito_id=credit["id"],
-                    cliente_id=credit["cliente_id"],
-                    cliente_nombre=credit["cliente_nombre"],
-                    monto_pendiente=pago["monto"],
-                    fecha_pago=pago["fecha"],
-                    dias_atraso=0
+                    dias_atraso=0,
+                    **alert_data
                 ))
             break  # Solo el próximo pago pendiente
     
