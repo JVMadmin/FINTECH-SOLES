@@ -1590,7 +1590,7 @@ async def get_asesores_cashbox_status(user: dict = Depends(get_current_user)):
     }
 
 @api_router.post("/cashbox/close-regional")
-async def close_regional_cashbox(data: CashboxClose, user: dict = Depends(get_current_user)):
+async def close_regional_cashbox(data: CashBoxCreate, user: dict = Depends(get_current_user)):
     """Cerrar caja regional - Solo supervisor después de que todos los asesores cierren"""
     check_role(user, ["desarrollador", "administrador", "gerente_regional", "supervisor"])
     
