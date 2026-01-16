@@ -1511,6 +1511,164 @@ async def get_cashbox_history(
     cashboxes = await db.cashbox.find(query, {"_id": 0}).sort("fecha", -1).to_list(100)
     return cashboxes
 
+@api_router.get("/cashbox/asesores-status")
+async def get_asesores_cashbox_status(user: dict = Depends(get_current_user)):
+    """Obtener estado de caja de cada asesor para el supervisor"""
+    check_role(user, ["desarrollador", "administrador", "gerente_regional", "supervisor"])
+    
+    today = datetime.now(timezone.utc).strftime("%Y-%m-%d")
+    today_start = datetime.strptime(today, "%Y-%m-%d").replace(tzinfo=timezone.utc)
+    today_end = today_start + timedelta(days=1)
+    
+    # Obtener asesores del supervisor
+    asesor_query = {"rol": "asesor", "activo": True}
+    if user["rol"] == "supervisor":
+        asesor_query["supervisor_id"] = user["sub"]
+    elif user["rol"] == "gerente_regional":
+        asesor_query["region"] = user["region"]
+    
+    asesores = await db.users.find(asesor_query, {"_id": 0}).to_list(100)
+    
+    asesores_status = []
+    total_cobrado_regional = 0
+    total_pagos_regional = 0
+    asesores_cerrados = 0
+    
+    for asesor in asesores:
+        # Obtener pagos del asesor hoy
+        pagos = await db.payments.find({
+            "registrado_por": asesor["id"],
+            "fecha_pago": {"$gte": today_start.isoformat(), "$lt": today_end.isoformat()}
+        }, {"_id": 0}).to_list(1000)
+        
+        total_asesor = sum(p["monto"] for p in pagos)
+        total_cobrado_regional += total_asesor
+        total_pagos_regional += len(pagos)
+        
+        # Verificar si ya cerró caja
+        cierre = await db.cashbox.find_one({
+            "fecha": today,
+            "asesor_id": asesor["id"],
+            "estatus": "cerrado"
+        }, {"_id": 0})
+        
+        if cierre:
+            asesores_cerrados += 1
+        
+        asesores_status.append({
+            "asesor_id": asesor["id"],
+            "asesor_nombre": asesor["nombre_completo"],
+            "region": asesor.get("region", ""),
+            "total_cobrado": total_asesor,
+            "numero_pagos": len(pagos),
+            "caja_cerrada": cierre is not None,
+            "hora_cierre": cierre.get("cerrado_fecha", "").split("T")[1][:5] if cierre else None,
+            "notas_cierre": cierre.get("notas", "") if cierre else None
+        })
+    
+    # Verificar si la caja regional ya está cerrada
+    caja_regional = await db.cashbox.find_one({
+        "fecha": today,
+        "asesor_id": None,
+        "region": user.get("region"),
+        "estatus": "cerrado"
+    }, {"_id": 0})
+    
+    return {
+        "fecha": today,
+        "asesores": asesores_status,
+        "resumen": {
+            "total_asesores": len(asesores),
+            "asesores_cerrados": asesores_cerrados,
+            "asesores_pendientes": len(asesores) - asesores_cerrados,
+            "total_cobrado_regional": total_cobrado_regional,
+            "total_pagos_regional": total_pagos_regional
+        },
+        "caja_regional_cerrada": caja_regional is not None,
+        "puede_cerrar_regional": asesores_cerrados == len(asesores) and len(asesores) > 0,
+        "hora_cierre_regional": caja_regional.get("cerrado_fecha", "").split("T")[1][:5] if caja_regional else None
+    }
+
+@api_router.post("/cashbox/close-regional")
+async def close_regional_cashbox(data: CashboxClose, user: dict = Depends(get_current_user)):
+    """Cerrar caja regional - Solo supervisor después de que todos los asesores cierren"""
+    check_role(user, ["desarrollador", "administrador", "gerente_regional", "supervisor"])
+    
+    today = datetime.now(timezone.utc).strftime("%Y-%m-%d")
+    
+    # Verificar que no esté ya cerrada
+    existing = await db.cashbox.find_one({
+        "fecha": today,
+        "asesor_id": None,
+        "region": user.get("region"),
+        "estatus": "cerrado"
+    })
+    
+    if existing:
+        raise HTTPException(status_code=400, detail="La caja regional ya fue cerrada")
+    
+    # Verificar que todos los asesores hayan cerrado
+    asesor_query = {"rol": "asesor", "activo": True}
+    if user["rol"] == "supervisor":
+        asesor_query["supervisor_id"] = user["sub"]
+    elif user["rol"] == "gerente_regional":
+        asesor_query["region"] = user["region"]
+    
+    asesores = await db.users.find(asesor_query, {"_id": 0}).to_list(100)
+    
+    for asesor in asesores:
+        cierre = await db.cashbox.find_one({
+            "fecha": today,
+            "asesor_id": asesor["id"],
+            "estatus": "cerrado"
+        })
+        if not cierre:
+            raise HTTPException(
+                status_code=400, 
+                detail=f"El asesor {asesor['nombre_completo']} aún no ha cerrado su caja"
+            )
+    
+    # Calcular totales regionales
+    today_start = datetime.strptime(today, "%Y-%m-%d").replace(tzinfo=timezone.utc)
+    today_end = today_start + timedelta(days=1)
+    
+    asesor_ids = [a["id"] for a in asesores]
+    payments = await db.payments.find({
+        "registrado_por": {"$in": asesor_ids},
+        "fecha_pago": {"$gte": today_start.isoformat(), "$lt": today_end.isoformat()}
+    }, {"_id": 0}).to_list(1000)
+    
+    total_cobrado = sum(p["monto"] for p in payments)
+    
+    cashbox_data = {
+        "id": str(uuid.uuid4()),
+        "fecha": today,
+        "region": user.get("region", "general"),
+        "asesor_id": None,
+        "asesor_nombre": "CAJA REGIONAL",
+        "tipo": "regional",
+        "total_cobrado": total_cobrado,
+        "numero_pagos": len(payments),
+        "numero_asesores": len(asesores),
+        "estatus": "cerrado",
+        "cerrado_por": user["sub"],
+        "cerrado_por_nombre": user["nombre"],
+        "cerrado_fecha": datetime.now(timezone.utc).isoformat(),
+        "notas": data.notas
+    }
+    
+    await db.cashbox.insert_one(cashbox_data)
+    
+    await log_action(user["sub"], user["nombre"], "cerrar_caja_regional", "caja", cashbox_data["id"],
+                    {"total": total_cobrado, "pagos": len(payments), "asesores": len(asesores)})
+    
+    return {
+        "message": "Caja regional cerrada exitosamente",
+        "total": total_cobrado,
+        "pagos": len(payments),
+        "asesores": len(asesores)
+    }
+
 # ============== FILE UPLOAD ROUTES ==============
 @api_router.post("/upload")
 async def upload_file(file: UploadFile = File(...), user: dict = Depends(get_current_user)):
