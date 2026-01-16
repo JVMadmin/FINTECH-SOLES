@@ -84,6 +84,9 @@ export default function DesembolsosPage() {
   const [selectedDisbursement, setSelectedDisbursement] = useState(null);
   const [actionType, setActionType] = useState(null); // approve, reject, execute
   const [rejectReason, setRejectReason] = useState("");
+  const [evidenciaTarjeta, setEvidenciaTarjeta] = useState(null);
+  const [evidenciaDesembolso, setEvidenciaDesembolso] = useState(null);
+  const [isUploading, setIsUploading] = useState(false);
   
   const [newDisbursement, setNewDisbursement] = useState({
     cliente_id: "",
@@ -94,6 +97,7 @@ export default function DesembolsosPage() {
     es_renovacion: false,
     credito_anterior_id: "",
     notas: "",
+    evidencia_tarjeta_url: "",
   });
 
   const canApprove = hasRole(["desarrollador", "administrador", "gerente_regional", "supervisor"]);
