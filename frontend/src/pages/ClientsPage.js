@@ -152,9 +152,15 @@ export default function ClientsPage() {
   );
 
   const clearFilters = () => {
-    setFilterRegion("");
+    setFilterLocalidad("");
     setFilterEstatus("");
+    setFilterAsesor("");
     setSearchTerm("");
+  };
+
+  const getLocalidadName = (id) => {
+    const loc = LOCALIDADES.find(l => l.id === id);
+    return loc ? loc.nombre : id;
   };
 
   return (
