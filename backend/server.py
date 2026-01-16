@@ -1361,25 +1361,38 @@ async def get_today_cashbox(user: dict = Depends(get_current_user)):
     return cashbox
 
 @api_router.get("/cashbox/regional")
-async def get_regional_cashbox(user: dict = Depends(get_current_user)):
-    """Obtener resumen de caja regional con detalle por asesor"""
+async def get_regional_cashbox(
+    user: dict = Depends(get_current_user),
+    asesor_id: Optional[str] = None,
+    localidad: Optional[str] = None
+):
+    """Obtener resumen de caja regional con detalle por asesor y filtros"""
     check_role(user, ["desarrollador", "administrador", "gerente_regional", "supervisor"])
     
     today = datetime.now(timezone.utc).strftime("%Y-%m-%d")
     today_start = datetime.strptime(today, "%Y-%m-%d").replace(tzinfo=timezone.utc)
     today_end = today_start + timedelta(days=1)
     
-    # Obtener asesores según rol
+    # Construir query para asesores
+    asesor_query = {"rol": "asesor", "activo": True}
+    
     if user["rol"] == "supervisor":
-        asesores = await db.users.find({"supervisor_id": user["sub"], "rol": "asesor", "activo": True}, {"_id": 0}).to_list(100)
+        asesor_query["supervisor_id"] = user["sub"]
     elif user["rol"] == "gerente_regional":
-        asesores = await db.users.find({"region": user["region"], "rol": "asesor", "activo": True}, {"_id": 0}).to_list(100)
-    else:
-        asesores = await db.users.find({"rol": "asesor", "activo": True}, {"_id": 0}).to_list(100)
+        asesor_query["region"] = user["region"]
+    
+    # Aplicar filtros
+    if asesor_id:
+        asesor_query["id"] = asesor_id
+    if localidad:
+        asesor_query["region"] = localidad
+    
+    asesores = await db.users.find(asesor_query, {"_id": 0}).to_list(100)
     
     cajas_asesores = []
     total_regional = 0
     total_pagos = 0
+    pagos_por_localidad = {}
     
     for asesor in asesores:
         payments = await db.payments.find({
@@ -1391,20 +1404,33 @@ async def get_regional_cashbox(user: dict = Depends(get_current_user)):
         total_regional += asesor_total
         total_pagos += len(payments)
         
+        # Agrupar por localidad
+        asesor_region = asesor.get("region", "sin_asignar")
+        if asesor_region not in pagos_por_localidad:
+            pagos_por_localidad[asesor_region] = {"total": 0, "pagos": 0}
+        pagos_por_localidad[asesor_region]["total"] += asesor_total
+        pagos_por_localidad[asesor_region]["pagos"] += len(payments)
+        
         cajas_asesores.append({
             "asesor_id": asesor["id"],
             "asesor_nombre": asesor["nombre_completo"],
+            "region": asesor.get("region", "sin_asignar"),
             "total_cobrado": asesor_total,
             "numero_pagos": len(payments),
-            "supervisor_id": asesor.get("supervisor_id")
+            "supervisor_id": asesor.get("supervisor_id"),
+            "pagos": payments  # Incluir pagos detallados
         })
+    
+    # Ordenar por total cobrado descendente
+    cajas_asesores.sort(key=lambda x: x["total_cobrado"], reverse=True)
     
     return {
         "fecha": today,
         "region": user.get("region", "todas"),
         "total_regional": total_regional,
         "total_pagos": total_pagos,
-        "asesores": cajas_asesores
+        "asesores": cajas_asesores,
+        "por_localidad": pagos_por_localidad
     }
 
 @api_router.post("/cashbox/close")
