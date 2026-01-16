@@ -276,6 +276,35 @@ export default function CobranzaPage() {
   const alertsHoy = alerts.filter(a => a.tipo === "pago_hoy");
   const alertsAtrasados = alerts.filter(a => a.tipo === "atrasado");
   const alertsPorVencer = alerts.filter(a => a.tipo === "por_vencer");
+  
+  // Separar por vencer por tipo de crédito
+  const alertsSemanales = alertsPorVencer.filter(a => a.tipo_credito === "semanal");
+  const alertsCatorcenales = alertsPorVencer.filter(a => a.tipo_credito === "catorcenal");
+  const alertsDiarios = alertsPorVencer.filter(a => a.tipo_credito === "diario");
+
+  // Función para abrir mapa con coordenadas
+  const openMap = (alert, e) => {
+    e.stopPropagation();
+    if (alert.coordenadas_domicilio?.lat && alert.coordenadas_domicilio?.lng) {
+      const url = `https://www.google.com/maps/dir/?api=1&destination=${alert.coordenadas_domicilio.lat},${alert.coordenadas_domicilio.lng}`;
+      window.open(url, "_blank");
+    } else if (alert.cliente_direccion) {
+      const url = `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(alert.cliente_direccion)}`;
+      window.open(url, "_blank");
+    } else {
+      toast.error("No hay coordenadas o dirección disponible");
+    }
+  };
+
+  const getTipoCreditoBadge = (tipo) => {
+    const tipos = {
+      diario: { label: "Diario", color: "bg-blue-100 text-blue-800" },
+      semanal: { label: "Semanal", color: "bg-purple-100 text-purple-800" },
+      catorcenal: { label: "Catorcenal", color: "bg-indigo-100 text-indigo-800" },
+    };
+    const t = tipos[tipo] || tipos.diario;
+    return <Badge className={`${t.color} text-xs`}>{t.label}</Badge>;
+  };
 
   if (isLoading) {
     return (
