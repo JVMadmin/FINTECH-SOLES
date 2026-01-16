@@ -16,6 +16,16 @@ import {
   DialogDescription,
 } from "@/components/ui/dialog";
 import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
+import {
   Select,
   SelectContent,
   SelectItem,
@@ -38,6 +48,9 @@ import {
   Ban,
   Check,
   Shield,
+  Key,
+  Trash2,
+  MapPin,
 } from "lucide-react";
 import { toast } from "sonner";
 
@@ -51,7 +64,7 @@ const ROLES = [
   { value: "asesor", label: "Asesor de Crédito", color: "bg-gray-100 text-gray-800" },
 ];
 
-const REGIONS = [
+const LOCALIDADES = [
   { id: "yajalon", nombre: "Yajalón (Sede Regional #3)", tipo: "sede" },
   { id: "chilon", nombre: "Chilón", tipo: "comunidad" },
   { id: "bachajon", nombre: "Bachajón", tipo: "comunidad" },
@@ -68,6 +81,11 @@ export default function UsersPage() {
   const [searchTerm, setSearchTerm] = useState("");
   const [filterRole, setFilterRole] = useState("");
   const [isDialogOpen, setIsDialogOpen] = useState(false);
+  const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
+  const [isPasswordDialogOpen, setIsPasswordDialogOpen] = useState(false);
+  const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
+  const [selectedUser, setSelectedUser] = useState(null);
+  const [newPassword, setNewPassword] = useState("");
   const [newUser, setNewUser] = useState({
     username: "",
     password: "",
@@ -75,6 +93,11 @@ export default function UsersPage() {
     rol: "",
     region: user?.region || "",
     telefono: "",
+  });
+  const [editUser, setEditUser] = useState({
+    nombre_completo: "",
+    telefono: "",
+    region: "",
   });
 
   useEffect(() => {
