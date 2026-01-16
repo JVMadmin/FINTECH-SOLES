@@ -252,6 +252,11 @@ class AlertResponse(BaseModel):
     monto_pendiente: float
     fecha_pago: str
     dias_atraso: int = 0
+    tipo_credito: str = ""  # diario, semanal, catorcenal
+    cliente_telefono: str = ""
+    cliente_direccion: str = ""
+    coordenadas_domicilio: Optional[dict] = None
+    asesor_nombre: str = ""
 
 # ============== HELPER FUNCTIONS ==============
 def hash_password(password: str) -> str:
