@@ -235,14 +235,31 @@ export default function DesembolsosPage() {
   };
 
   const handleExecute = async () => {
+    if (!evidenciaDesembolso) {
+      toast.error("Debe adjuntar foto de evidencia del desembolso");
+      return;
+    }
+
     try {
-      await axios.post(`${API}/disbursements/${selectedDisbursement.id}/execute`);
+      setIsUploading(true);
+      // Subir evidencia de desembolso
+      const evidenciaUrl = await handleFileUpload(evidenciaDesembolso, "desembolso");
+      
+      if (!evidenciaUrl) {
+        toast.error("Error al subir la evidencia");
+        return;
+      }
+
+      await axios.post(`${API}/disbursements/${selectedDisbursement.id}/execute?evidencia_desembolso_url=${encodeURIComponent(evidenciaUrl)}`);
       toast.success("Desembolso ejecutado - Crédito creado");
       setSelectedDisbursement(null);
       setActionType(null);
+      setEvidenciaDesembolso(null);
       fetchData();
     } catch (error) {
       toast.error(error.response?.data?.detail || "Error al ejecutar");
+    } finally {
+      setIsUploading(false);
     }
   };
 
