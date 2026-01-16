@@ -43,6 +43,50 @@ const MainLayout = ({ children }) => {
   const location = useLocation();
   const navigate = useNavigate();
   const [mobileOpen, setMobileOpen] = useState(false);
+  const [notifications, setNotifications] = useState([]);
+  const [unreadCount, setUnreadCount] = useState(0);
+  const [notificationsOpen, setNotificationsOpen] = useState(false);
+
+  // Fetch notifications
+  const fetchNotifications = useCallback(async () => {
+    try {
+      const [notifRes, countRes] = await Promise.all([
+        axios.get(`${API}/notifications`),
+        axios.get(`${API}/notifications/unread-count`)
+      ]);
+      setNotifications(notifRes.data);
+      setUnreadCount(countRes.data.count);
+    } catch (error) {
+      console.error("Error fetching notifications:", error);
+    }
+  }, []);
+
+  // Poll for notifications every 30 seconds
+  useEffect(() => {
+    if (user) {
+      fetchNotifications();
+      const interval = setInterval(fetchNotifications, 30000);
+      return () => clearInterval(interval);
+    }
+  }, [user, fetchNotifications]);
+
+  const markAsRead = async (notificationId) => {
+    try {
+      await axios.post(`${API}/notifications/${notificationId}/read`);
+      fetchNotifications();
+    } catch (error) {
+      console.error("Error marking notification as read:", error);
+    }
+  };
+
+  const markAllAsRead = async () => {
+    try {
+      await axios.post(`${API}/notifications/read-all`);
+      fetchNotifications();
+    } catch (error) {
+      console.error("Error marking all as read:", error);
+    }
+  };
 
   const handleLogout = () => {
     logout();
@@ -164,6 +208,64 @@ const MainLayout = ({ children }) => {
           </div>
         </div>
 
+        {/* Notifications Bell for Desktop */}
+        <div className="px-4 py-2 border-b border-gray-200">
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <Button variant="outline" className="w-full justify-start gap-2 relative" data-testid="notifications-btn">
+                <Bell className="w-4 h-4" />
+                <span>Notificaciones</span>
+                {unreadCount > 0 && (
+                  <Badge className="ml-auto bg-red-500 text-white">
+                    {unreadCount > 9 ? "9+" : unreadCount}
+                  </Badge>
+                )}
+              </Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="start" className="w-80">
+              <div className="flex items-center justify-between px-3 py-2 border-b">
+                <span className="font-semibold text-sm">Notificaciones</span>
+                {unreadCount > 0 && (
+                  <Button variant="ghost" size="sm" onClick={markAllAsRead} className="text-xs h-7">
+                    <CheckCheck className="w-3 h-3 mr-1" />
+                    Marcar todas
+                  </Button>
+                )}
+              </div>
+              <div className="max-h-[350px] overflow-y-auto">
+                {notifications.length === 0 ? (
+                  <div className="py-8 text-center text-gray-500 text-sm">
+                    No hay notificaciones
+                  </div>
+                ) : (
+                  notifications.slice(0, 10).map((notif) => (
+                    <DropdownMenuItem
+                      key={notif.id}
+                      className={`flex flex-col items-start p-3 cursor-pointer ${!notif.leido ? "bg-blue-50" : ""}`}
+                      onClick={() => !notif.leido && markAsRead(notif.id)}
+                    >
+                      <div className="flex items-start gap-2 w-full">
+                        <div className={`w-2 h-2 rounded-full mt-1.5 flex-shrink-0 ${!notif.leido ? "bg-blue-500" : "bg-transparent"}`} />
+                        <div className="flex-1 min-w-0">
+                          <p className="text-sm">{notif.mensaje}</p>
+                          <p className="text-xs text-gray-400 mt-1">
+                            {new Date(notif.fecha).toLocaleString("es-MX", { 
+                              day: "numeric", month: "short", hour: "2-digit", minute: "2-digit" 
+                            })}
+                          </p>
+                        </div>
+                        {!notif.leido && (
+                          <Check className="w-4 h-4 text-gray-400 flex-shrink-0" />
+                        )}
+                      </div>
+                    </DropdownMenuItem>
+                  ))
+                )}
+              </div>
+            </DropdownMenuContent>
+          </DropdownMenu>
+        </div>
+
         {/* Navigation */}
         <nav className="flex-1 px-3 py-4 space-y-1 overflow-y-auto">
           {filteredNavItems.map((item) => (
@@ -206,6 +308,61 @@ const MainLayout = ({ children }) => {
             SOLES
           </span>
         </div>
+
+        {/* Mobile Notifications */}
+        <DropdownMenu open={notificationsOpen} onOpenChange={setNotificationsOpen}>
+          <DropdownMenuTrigger asChild>
+            <Button variant="ghost" size="icon" className="relative" data-testid="notifications-btn-mobile">
+              <Bell className="w-5 h-5" />
+              {unreadCount > 0 && (
+                <span className="absolute -top-1 -right-1 w-5 h-5 bg-red-500 text-white text-xs rounded-full flex items-center justify-center">
+                  {unreadCount > 9 ? "9+" : unreadCount}
+                </span>
+              )}
+            </Button>
+          </DropdownMenuTrigger>
+          <DropdownMenuContent align="end" className="w-80">
+            <div className="flex items-center justify-between px-3 py-2 border-b">
+              <span className="font-semibold">Notificaciones</span>
+              {unreadCount > 0 && (
+                <Button variant="ghost" size="sm" onClick={markAllAsRead} className="text-xs">
+                  <CheckCheck className="w-3 h-3 mr-1" />
+                  Marcar todas
+                </Button>
+              )}
+            </div>
+            <div className="max-h-[300px] overflow-y-auto">
+              {notifications.length === 0 ? (
+                <div className="py-8 text-center text-gray-500 text-sm">
+                  No hay notificaciones
+                </div>
+              ) : (
+                notifications.slice(0, 10).map((notif) => (
+                  <DropdownMenuItem
+                    key={notif.id}
+                    className={`flex flex-col items-start p-3 cursor-pointer ${!notif.leido ? "bg-blue-50" : ""}`}
+                    onClick={() => !notif.leido && markAsRead(notif.id)}
+                  >
+                    <div className="flex items-start gap-2 w-full">
+                      <div className={`w-2 h-2 rounded-full mt-1.5 flex-shrink-0 ${!notif.leido ? "bg-blue-500" : "bg-transparent"}`} />
+                      <div className="flex-1 min-w-0">
+                        <p className="text-sm">{notif.mensaje}</p>
+                        <p className="text-xs text-gray-400 mt-1">
+                          {new Date(notif.fecha).toLocaleString("es-MX", { 
+                            day: "numeric", month: "short", hour: "2-digit", minute: "2-digit" 
+                          })}
+                        </p>
+                      </div>
+                      {!notif.leido && (
+                        <Check className="w-4 h-4 text-gray-400 flex-shrink-0" />
+                      )}
+                    </div>
+                  </DropdownMenuItem>
+                ))
+              )}
+            </div>
+          </DropdownMenuContent>
+        </DropdownMenu>
 
         <Sheet open={mobileOpen} onOpenChange={setMobileOpen}>
           <SheetTrigger asChild>
