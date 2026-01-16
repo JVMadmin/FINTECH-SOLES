@@ -1769,6 +1769,8 @@ async def create_disbursement_request(data: DisbursementRequest, user: dict = De
         "fecha_solicitud": datetime.now(timezone.utc).isoformat(),
         "region": client.get("region", user.get("region")),
         "notas": data.notas,
+        "evidencia_tarjeta_url": data.evidencia_tarjeta_url,
+        "evidencia_desembolso_url": None,
         "revisado_por": None,
         "revisado_por_nombre": None,
         "fecha_revision": None,
