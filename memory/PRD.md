@@ -2,7 +2,7 @@
 ## Product Requirements Document
 
 ### Fecha de Actualización: 2025-01-16
-### Version: 1.2
+### Version: 1.3
 
 ---
 
@@ -31,10 +31,10 @@ Sistema financiero integral para SOLES CORPORATIVO – CRÉDITOS. Sistema de adm
 | Rol | Permisos |
 |-----|----------|
 | **Desarrollador** | Acceso total al sistema, configuración, logs |
-| **Administrador** | Gestión de usuarios (editar/eliminar/contraseña), reportes globales, filtros avanzados |
-| **Gerente Regional** | Autoriza créditos, ve cartera regional, asigna supervisores, edita usuarios de su región |
-| **Supervisor** | Asigna cartera a asesores, autoriza créditos, **registra pagos**, edita asesores de su equipo |
-| **Asesor de Crédito** | Alta clientes, **registra pagos**, ve su caja personal |
+| **Administrador** | Gestión de usuarios, reportes globales, filtros avanzados |
+| **Gerente Regional** | Autoriza créditos/desembolsos, ve cartera regional, cierra caja regional |
+| **Supervisor** | Autoriza créditos/desembolsos, registra pagos, cierra caja regional, edita asesores |
+| **Asesor de Crédito** | Alta clientes, registra pagos, solicita desembolsos, cierra su caja |
 
 ---
 
@@ -43,55 +43,70 @@ Sistema financiero integral para SOLES CORPORATIVO – CRÉDITOS. Sistema de adm
 ### ✅ Autenticación y Usuarios
 - Login con usuario/contraseña (JWT)
 - Roles RBAC con permisos estrictos
-- **Gestión de usuarios mejorada:**
-  - Admin/Gerente/Supervisor pueden editar usuarios de su ámbito
-  - Cambio de contraseña por administradores
-  - Activar/desactivar usuarios
-- Usuarios de prueba: developer/developer123, admin/admin123, gerente_yajalon/gerente123, supervisor_yajalon/supervisor123
+- Gestión de usuarios (editar/eliminar/contraseña)
+- Filtros por región y rol
 
 ### ✅ Gestión de Clientes
-- Alta de clientes con datos básicos
-- Referencias personales (nombre, teléfono, relación)
-- Evidencias obligatorias (fotos cliente/domicilio/negocio)
-- Coordenadas GPS para domicilio y negocio
+- Alta de clientes con datos completos
+- Evidencias obligatorias (fotos)
+- Coordenadas GPS
 - **Filtros avanzados por localidad y asesor**
-- Estatus: Vigente, Atrasado, Vencido
 
 ### ✅ Gestión de Créditos
 - Tipos: Diario (L-V), Semanal, Catorcenal
 - Cálculo automático de calendario de pagos
-- Flujo de autorización: Pendiente → Autorizado → Vigente
-- Supervisores y Gerentes pueden autorizar/rechazar
-- **Filtros avanzados por localidad y asesor** (Admin/Gerente)
+- Flujo de autorización
+- **Filtros avanzados por localidad y asesor**
 
-### ✅ Sistema de Cobranza
-- Alertas automáticas por estatus
-- Pagos del día, atrasados, próximos a vencer
-- **Asesores Y Supervisores pueden registrar pagos**
-- Métodos: efectivo, transferencia, depósito
-- Flujo "NO PAGO" completo con evidencia
+### ✅ Sistema de Cobranza (MEJORADO)
+- **5 tarjetas resumen**: Hoy, Atrasados, Por Vencer (Diarios, Semanales, Catorcenales)
+- **Secciones separadas por tipo de crédito**
+- **Botón "Mapa"** para acceso a Google Maps con coordenadas del cliente
+- Teléfono del cliente visible
+- Badge de tipo de crédito
+- Flujo "NO PAGO" con evidencia
 
-### ✅ Asignación de Cartera
-- Solo supervisores pueden asignar clientes
-- Selección múltiple de clientes
-- Limitado a región del supervisor
+### ✅ Caja Regional del Supervisor (NUEVO)
+- **Estado de Cierres del Día**: Progreso visual de cierres de asesores
+- **Tarjetas por asesor**: ✓ verde (cerrado) / ○ naranja (pendiente)
+- **Resumen por Localidad**: Totales por zona
+- **Cobros por Asesor**: Acordeón expandible con detalle de pagos
+- **Flujo de cierre jerárquico**:
+  1. Asesores cierran su caja individual
+  2. Supervisor ve en tiempo real quién ha cerrado
+  3. Botón "Cerrar Caja Regional" se habilita cuando TODOS cierran
+- **Filtros** por localidad y asesor
 
-### ✅ Página de Asignaciones
-- Asignación de supervisores a regiones (Admin/Gerente)
+### ✅ Dashboard de Supervisor en Tiempo Real (NUEVO)
+- **Tarjeta "Rendimiento del Día"** con badge "EN VIVO"
+  - Cobrado Hoy vs Esperado
+  - Pagos Realizados vs Esperados
+  - % de Cobro con barra de progreso
+  - Pagos Atrasados
+- **Alertas de Cobranza** con enlaces directos
+- **Desembolsos Pendientes** de aprobación
+- **Rendimiento de Asesores**: Ranking con medallas (oro, plata, bronce)
+- **Auto-actualización cada 30 segundos**
+
+### ✅ Programación de Desembolsos (NUEVO)
+- **Solicitud de desembolso**: Asesor o Supervisor crean solicitud
+- **Renovaciones**: Cliente debe liquidar crédito anterior
+- **Selección de fecha de desembolso**
+- **Flujo de aprobación**:
+  1. Asesor solicita desembolso
+  2. Supervisor/Gerente aprueba o rechaza
+  3. Supervisor ejecuta desembolso (crea el crédito)
+- **Tabs**: Pendientes | Programados | Todas
+- **Dashboard**: Muestra desembolsos pendientes
+
+### ✅ Asignaciones
+- Asignación de supervisores a regiones
 - Asignación de asesores a supervisores
-- Vista de supervisores por región con estado
-- Vista de asesores agrupados por supervisor
-
-### ✅ Caja y Cierre
-- **Caja Personal (Asesor)**: Solo pagos registrados por el asesor
-- **Caja Regional (Supervisor)**: Consolidación de pagos de sus asesores
-- Cierre de caja con notas
-- Historial de cierres
+- Vista jerárquica
 
 ### ✅ Auditoría
-- Log de todas las acciones del sistema
+- Log de todas las acciones
 - Filtros por entidad y usuario
-- Trazabilidad completa
 
 ---
 
@@ -106,34 +121,43 @@ Sistema financiero integral para SOLES CORPORATIVO – CRÉDITOS. Sistema de adm
 ## Diseño UI/UX
 - Tema "Tactical Gold" - Dorado corporativo
 - Fondo gris anti-reflejo para uso en campo
-- Botones grandes (mínimo 48px) para móviles
+- Botones grandes para móviles
 - Colores semáforo: Verde=Vigente, Amarillo=Atrasado, Rojo=Vencido
-- Diseño responsive con bottom navigation para móvil
 
 ---
 
 ## Backlog Pendiente
 
 ### P1 (Próximas)
-- Evidencia fotográfica obligatoria al desembolsar crédito
+- Evidencia fotográfica al desembolsar
 - Reportes exportables (PDF/Excel)
 
 ### P2 (Futuro)
-- Integración de mapas (Google Maps/Leaflet)
-- Notificaciones por WhatsApp
-- Firma digital de contratos
-- Tickets de pago impresos
+- Asignaciones mejoradas (auto-asignar por zona)
+- Integración de mapas embebidos
+- Notificaciones WhatsApp
+- Firma digital
 - Score interno de clientes
 
 ---
 
-## Archivos Clave
-- `/app/backend/server.py` - Backend monolito FastAPI
-- `/app/frontend/src/pages/UsersPage.js` - Gestión de usuarios con edición/contraseña
-- `/app/frontend/src/pages/CreditsPage.js` - Créditos con filtros avanzados
-- `/app/frontend/src/pages/ClientsPage.js` - Clientes con filtros avanzados
-- `/app/frontend/src/pages/CobranzaPage.js` - Cobranza y flujo NO PAGO
-- `/app/frontend/src/pages/CashboxPage.js` - Caja personal/regional
+## Endpoints API Principales
+
+### Desembolsos
+- `POST /api/disbursements` - Crear solicitud
+- `GET /api/disbursements` - Listar solicitudes
+- `GET /api/disbursements/pending` - Pendientes de aprobación
+- `GET /api/disbursements/scheduled` - Programados (próximos 7 días)
+- `POST /api/disbursements/{id}/approve` - Aprobar
+- `POST /api/disbursements/{id}/reject` - Rechazar
+- `POST /api/disbursements/{id}/execute` - Ejecutar y crear crédito
+
+### Caja
+- `GET /api/cashbox/asesores-status` - Estado de cierres de asesores
+- `POST /api/cashbox/close-regional` - Cerrar caja regional
+
+### Dashboard
+- `GET /api/stats/supervisor-dashboard` - Dashboard en tiempo real
 
 ---
 
@@ -146,10 +170,11 @@ Sistema financiero integral para SOLES CORPORATIVO – CRÉDITOS. Sistema de adm
 ---
 
 ## Changelog
-- **v1.2 (2025-01-16):** 
-  - Supervisores pueden registrar pagos
-  - Admin/Gerente/Supervisor pueden editar/desactivar usuarios y cambiar contraseñas
-  - Filtros avanzados por localidad y asesor en créditos y clientes
-  - Corrección de estructura de localidades
-- **v1.1 (2025-01-15):** Página de Asignaciones añadida al menú
-- **v1.0 (2025-01-14):** MVP inicial con autenticación, clientes, créditos, cobranza
+- **v1.3 (2025-01-16)**:
+  - Cobranza: Secciones separadas por tipo, botón de mapa, 5 tarjetas resumen
+  - Caja Regional: Estado de cierres, cierre jerárquico, filtros
+  - Dashboard Supervisor: Métricas en tiempo real, rendimiento asesores
+  - Desembolsos Programados: Flujo completo de solicitud/aprobación/ejecución
+- **v1.2 (2025-01-16)**: Supervisores registran pagos, gestión de usuarios mejorada, filtros avanzados
+- **v1.1 (2025-01-15)**: Página de Asignaciones
+- **v1.0 (2025-01-14)**: MVP inicial
