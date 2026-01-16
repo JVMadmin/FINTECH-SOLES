@@ -1716,6 +1716,247 @@ async def upload_file(file: UploadFile = File(...), user: dict = Depends(get_cur
     # Retornar URL relativa
     return {"url": f"/api/uploads/{filename}", "filename": filename}
 
+# ============== DISBURSEMENT REQUESTS ROUTES ==============
+@api_router.post("/disbursements", response_model=DisbursementResponse)
+async def create_disbursement_request(data: DisbursementRequest, user: dict = Depends(get_current_user)):
+    """Crear solicitud de desembolso programado - Asesor o Supervisor"""
+    check_role(user, ["desarrollador", "administrador", "gerente_regional", "supervisor", "asesor"])
+    
+    # Verificar que el cliente existe
+    client = await db.clients.find_one({"id": data.cliente_id}, {"_id": 0})
+    if not client:
+        raise HTTPException(status_code=404, detail="Cliente no encontrado")
+    
+    # Si es renovación, verificar que el crédito anterior esté liquidado
+    if data.es_renovacion and data.credito_anterior_id:
+        credito_anterior = await db.credits.find_one({"id": data.credito_anterior_id}, {"_id": 0})
+        if not credito_anterior:
+            raise HTTPException(status_code=404, detail="Crédito anterior no encontrado")
+        if credito_anterior.get("estatus") != "liquidado":
+            raise HTTPException(
+                status_code=400, 
+                detail="El cliente debe liquidar su crédito actual antes de renovar"
+            )
+    
+    # Verificar que no tenga créditos activos si es nuevo
+    if not data.es_renovacion:
+        credito_activo = await db.credits.find_one({
+            "cliente_id": data.cliente_id,
+            "estatus": {"$in": ["pendiente", "autorizado", "vigente", "atrasado"]}
+        })
+        if credito_activo:
+            raise HTTPException(
+                status_code=400,
+                detail="El cliente tiene un crédito activo. Use la opción de renovación."
+            )
+    
+    disbursement = {
+        "id": str(uuid.uuid4()),
+        "cliente_id": data.cliente_id,
+        "cliente_nombre": client["nombre_completo"],
+        "monto": data.monto,
+        "tipo_credito": data.tipo_credito,
+        "plazo": data.plazo,
+        "fecha_desembolso": data.fecha_desembolso,
+        "es_renovacion": data.es_renovacion,
+        "credito_anterior_id": data.credito_anterior_id,
+        "estatus": "pendiente",
+        "solicitado_por": user["sub"],
+        "solicitado_por_nombre": user["nombre"],
+        "fecha_solicitud": datetime.now(timezone.utc).isoformat(),
+        "region": client.get("region", user.get("region")),
+        "notas": data.notas,
+        "revisado_por": None,
+        "revisado_por_nombre": None,
+        "fecha_revision": None,
+        "motivo_rechazo": None
+    }
+    
+    await db.disbursements.insert_one(disbursement)
+    
+    await log_action(user["sub"], user["nombre"], "solicitar_desembolso", "desembolso", disbursement["id"],
+                    {"cliente": client["nombre_completo"], "monto": data.monto, "fecha": data.fecha_desembolso})
+    
+    return DisbursementResponse(**disbursement)
+
+@api_router.get("/disbursements")
+async def get_disbursements(
+    estatus: Optional[str] = None,
+    user: dict = Depends(get_current_user)
+):
+    """Obtener solicitudes de desembolso"""
+    query = {}
+    
+    if user["rol"] == "asesor":
+        query["solicitado_por"] = user["sub"]
+    elif user["rol"] in ["supervisor", "gerente_regional"]:
+        query["region"] = user["region"]
+    
+    if estatus:
+        query["estatus"] = estatus
+    
+    disbursements = await db.disbursements.find(query, {"_id": 0}).sort("fecha_solicitud", -1).to_list(100)
+    return disbursements
+
+@api_router.get("/disbursements/pending")
+async def get_pending_disbursements(user: dict = Depends(get_current_user)):
+    """Obtener solicitudes de desembolso pendientes de aprobación"""
+    check_role(user, ["desarrollador", "administrador", "gerente_regional", "supervisor"])
+    
+    query = {"estatus": "pendiente"}
+    
+    if user["rol"] in ["supervisor", "gerente_regional"]:
+        query["region"] = user["region"]
+    
+    disbursements = await db.disbursements.find(query, {"_id": 0}).sort("fecha_desembolso", 1).to_list(100)
+    return disbursements
+
+@api_router.get("/disbursements/scheduled")
+async def get_scheduled_disbursements(user: dict = Depends(get_current_user)):
+    """Obtener desembolsos programados (aprobados) para los próximos días"""
+    query = {"estatus": "aprobado"}
+    
+    if user["rol"] in ["supervisor", "gerente_regional"]:
+        query["region"] = user["region"]
+    elif user["rol"] == "asesor":
+        query["solicitado_por"] = user["sub"]
+    
+    # Solo los próximos 7 días
+    today = datetime.now(timezone.utc).strftime("%Y-%m-%d")
+    week_later = (datetime.now(timezone.utc) + timedelta(days=7)).strftime("%Y-%m-%d")
+    query["fecha_desembolso"] = {"$gte": today, "$lte": week_later}
+    
+    disbursements = await db.disbursements.find(query, {"_id": 0}).sort("fecha_desembolso", 1).to_list(100)
+    return disbursements
+
+@api_router.post("/disbursements/{disbursement_id}/approve")
+async def approve_disbursement(disbursement_id: str, user: dict = Depends(get_current_user)):
+    """Aprobar solicitud de desembolso - Supervisor o Gerente"""
+    check_role(user, ["desarrollador", "administrador", "gerente_regional", "supervisor"])
+    
+    disbursement = await db.disbursements.find_one({"id": disbursement_id}, {"_id": 0})
+    if not disbursement:
+        raise HTTPException(status_code=404, detail="Solicitud no encontrada")
+    
+    if disbursement["estatus"] != "pendiente":
+        raise HTTPException(status_code=400, detail="La solicitud ya fue procesada")
+    
+    await db.disbursements.update_one(
+        {"id": disbursement_id},
+        {"$set": {
+            "estatus": "aprobado",
+            "revisado_por": user["sub"],
+            "revisado_por_nombre": user["nombre"],
+            "fecha_revision": datetime.now(timezone.utc).isoformat()
+        }}
+    )
+    
+    await log_action(user["sub"], user["nombre"], "aprobar_desembolso", "desembolso", disbursement_id,
+                    {"cliente": disbursement["cliente_nombre"], "monto": disbursement["monto"]})
+    
+    return {"message": "Desembolso aprobado", "fecha_programada": disbursement["fecha_desembolso"]}
+
+@api_router.post("/disbursements/{disbursement_id}/reject")
+async def reject_disbursement(
+    disbursement_id: str, 
+    motivo: str = "",
+    user: dict = Depends(get_current_user)
+):
+    """Rechazar solicitud de desembolso - Supervisor o Gerente"""
+    check_role(user, ["desarrollador", "administrador", "gerente_regional", "supervisor"])
+    
+    disbursement = await db.disbursements.find_one({"id": disbursement_id}, {"_id": 0})
+    if not disbursement:
+        raise HTTPException(status_code=404, detail="Solicitud no encontrada")
+    
+    if disbursement["estatus"] != "pendiente":
+        raise HTTPException(status_code=400, detail="La solicitud ya fue procesada")
+    
+    await db.disbursements.update_one(
+        {"id": disbursement_id},
+        {"$set": {
+            "estatus": "rechazado",
+            "revisado_por": user["sub"],
+            "revisado_por_nombre": user["nombre"],
+            "fecha_revision": datetime.now(timezone.utc).isoformat(),
+            "motivo_rechazo": motivo
+        }}
+    )
+    
+    await log_action(user["sub"], user["nombre"], "rechazar_desembolso", "desembolso", disbursement_id,
+                    {"cliente": disbursement["cliente_nombre"], "motivo": motivo})
+    
+    return {"message": "Desembolso rechazado"}
+
+@api_router.post("/disbursements/{disbursement_id}/execute")
+async def execute_disbursement(
+    disbursement_id: str,
+    evidencia_url: str = "",
+    user: dict = Depends(get_current_user)
+):
+    """Ejecutar desembolso aprobado y crear el crédito"""
+    check_role(user, ["desarrollador", "administrador", "gerente_regional", "supervisor", "asesor"])
+    
+    disbursement = await db.disbursements.find_one({"id": disbursement_id}, {"_id": 0})
+    if not disbursement:
+        raise HTTPException(status_code=404, detail="Solicitud no encontrada")
+    
+    if disbursement["estatus"] != "aprobado":
+        raise HTTPException(status_code=400, detail="El desembolso debe estar aprobado para ejecutarse")
+    
+    # Crear el crédito
+    client = await db.clients.find_one({"id": disbursement["cliente_id"]}, {"_id": 0})
+    
+    # Generar calendario de pagos
+    calendario = generate_payment_schedule(
+        disbursement["monto"],
+        disbursement["tipo_credito"],
+        disbursement["plazo"],
+        disbursement["fecha_desembolso"]
+    )
+    
+    monto_por_pago = disbursement["monto"] / disbursement["plazo"]
+    
+    credit_data = {
+        "id": str(uuid.uuid4()),
+        "cliente_id": disbursement["cliente_id"],
+        "cliente_nombre": disbursement["cliente_nombre"],
+        "monto_otorgado": disbursement["monto"],
+        "tipo_credito": disbursement["tipo_credito"],
+        "plazo": disbursement["plazo"],
+        "monto_por_pago": round(monto_por_pago, 2),
+        "fecha_solicitud": disbursement["fecha_solicitud"],
+        "fecha_autorizacion": disbursement["fecha_revision"],
+        "fecha_inicio": disbursement["fecha_desembolso"],
+        "calendario_pagos": calendario,
+        "estatus": "vigente",
+        "saldo_pendiente": disbursement["monto"],
+        "pagos_realizados": 0,
+        "asesor_id": disbursement["solicitado_por"],
+        "region": disbursement.get("region", client.get("region")),
+        "es_renovacion": disbursement["es_renovacion"],
+        "credito_anterior_id": disbursement.get("credito_anterior_id"),
+        "evidencia_desembolso": evidencia_url,
+        "desembolso_id": disbursement_id
+    }
+    
+    await db.credits.insert_one(credit_data)
+    
+    # Actualizar el desembolso como ejecutado
+    await db.disbursements.update_one(
+        {"id": disbursement_id},
+        {"$set": {
+            "estatus": "ejecutado",
+            "credito_generado_id": credit_data["id"],
+            "fecha_ejecucion": datetime.now(timezone.utc).isoformat()
+        }}
+    )
+    
+    await log_action(user["sub"], user["nombre"], "ejecutar_desembolso", "desembolso", disbursement_id,
+                    {"cliente": disbursement["cliente_nombre"], "credito_id": credit_data["id"]})
+    
+    return {"message": "Desembolso ejecutado", "credito_id": credit_data["id"]}
+
 # ============== STATS/DASHBOARD ROUTES ==============
 @api_router.get("/stats/dashboard")
 async def get_dashboard_stats(user: dict = Depends(get_current_user)):
