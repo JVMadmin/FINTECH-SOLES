@@ -40,29 +40,32 @@ import {
   Eye,
   Filter,
   X,
+  User,
 } from "lucide-react";
 import { toast } from "sonner";
 
 const API = `${process.env.REACT_APP_BACKEND_URL}/api`;
 
-const REGIONS = [
+const LOCALIDADES = [
   { id: "yajalon", nombre: "Yajalón (Sede Regional #3)", tipo: "sede" },
-  { id: "chilon", nombre: "  └ Chilón", tipo: "comunidad" },
-  { id: "bachajon", nombre: "  └ Bachajón", tipo: "comunidad" },
-  { id: "temo", nombre: "  └ Temo", tipo: "comunidad" },
-  { id: "petalcingo", nombre: "  └ Petalcingo", tipo: "comunidad" },
-  { id: "tumbala", nombre: "  └ Tumbalá", tipo: "comunidad" },
-  { id: "tila", nombre: "  └ Tila", tipo: "comunidad" },
+  { id: "chilon", nombre: "Chilón", tipo: "comunidad" },
+  { id: "bachajon", nombre: "Bachajón", tipo: "comunidad" },
+  { id: "temo", nombre: "Temo", tipo: "comunidad" },
+  { id: "petalcingo", nombre: "Petalcingo", tipo: "comunidad" },
+  { id: "tumbala", nombre: "Tumbalá", tipo: "comunidad" },
+  { id: "tila", nombre: "Tila", tipo: "comunidad" },
 ];
 
 export default function ClientsPage() {
   const { user, hasRole } = useAuth();
   const navigate = useNavigate();
   const [clients, setClients] = useState([]);
+  const [asesores, setAsesores] = useState([]);
   const [isLoading, setIsLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState("");
-  const [filterRegion, setFilterRegion] = useState("");
+  const [filterLocalidad, setFilterLocalidad] = useState("");
   const [filterEstatus, setFilterEstatus] = useState("");
+  const [filterAsesor, setFilterAsesor] = useState("");
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [newClient, setNewClient] = useState({
     nombre_completo: "",
@@ -74,14 +77,18 @@ export default function ClientsPage() {
 
   useEffect(() => {
     fetchClients();
-  }, [filterRegion, filterEstatus]);
+    if (hasRole(["desarrollador", "administrador", "gerente_regional", "supervisor"])) {
+      fetchAsesores();
+    }
+  }, [filterLocalidad, filterEstatus, filterAsesor]);
 
   const fetchClients = async () => {
     try {
       let url = `${API}/clients`;
       const params = new URLSearchParams();
-      if (filterRegion) params.append("region", filterRegion);
+      if (filterLocalidad) params.append("region", filterLocalidad);
       if (filterEstatus) params.append("estatus", filterEstatus);
+      if (filterAsesor) params.append("asesor_id", filterAsesor);
       if (params.toString()) url += `?${params.toString()}`;
 
       const response = await axios.get(url);
@@ -90,6 +97,15 @@ export default function ClientsPage() {
       toast.error("Error al cargar clientes");
     } finally {
       setIsLoading(false);
+    }
+  };
+
+  const fetchAsesores = async () => {
+    try {
+      const response = await axios.get(`${API}/users`);
+      setAsesores(response.data.filter(u => u.rol === "asesor" && u.activo));
+    } catch (error) {
+      console.error("Error fetching asesores:", error);
     }
   };
 
