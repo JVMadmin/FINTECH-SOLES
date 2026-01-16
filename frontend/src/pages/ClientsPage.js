@@ -225,9 +225,9 @@ export default function ClientsPage() {
                     <SelectValue placeholder="Seleccionar localidad" />
                   </SelectTrigger>
                   <SelectContent>
-                    {REGIONS.map((region) => (
-                      <SelectItem key={region.id} value={region.id}>
-                        {region.nombre}
+                    {LOCALIDADES.map((loc) => (
+                      <SelectItem key={loc.id} value={loc.id}>
+                        {loc.tipo === "sede" ? "📍 " : ""}{loc.nombre}
                       </SelectItem>
                     ))}
                   </SelectContent>
