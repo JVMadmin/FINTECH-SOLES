@@ -1523,7 +1523,68 @@ async def close_cashbox(data: CashBoxCreate, user: dict = Depends(get_current_us
     await log_action(user["sub"], user["nombre"], "cerrar_caja", "caja", cashbox_data["id"],
                     {"total": total_cobrado, "pagos": len(payments)})
     
+    # Crear notificación para el supervisor si es un asesor cerrando caja
+    if user["rol"] == "asesor" and user.get("supervisor_id"):
+        notification = {
+            "id": str(uuid.uuid4()),
+            "tipo": "cierre_caja",
+            "titulo": "Caja Cerrada",
+            "mensaje": f"{user['nombre']} ha cerrado su caja del día con {formatCurrency(total_cobrado)} ({len(payments)} pagos)",
+            "destinatario_id": user["supervisor_id"],
+            "remitente_id": user["sub"],
+            "remitente_nombre": user["nombre"],
+            "fecha": datetime.now(timezone.utc).isoformat(),
+            "leida": False,
+            "datos": {
+                "asesor_id": user["sub"],
+                "asesor_nombre": user["nombre"],
+                "total_cobrado": total_cobrado,
+                "numero_pagos": len(payments)
+            }
+        }
+        await db.notifications.insert_one(notification)
+    
     return {"message": "Caja cerrada exitosamente", "total": total_cobrado}
+
+def formatCurrency(amount):
+    """Helper para formatear moneda en backend"""
+    return f"${amount:,.2f}"
+
+@api_router.get("/notifications")
+async def get_notifications(user: dict = Depends(get_current_user)):
+    """Obtener notificaciones del usuario"""
+    notifications = await db.notifications.find(
+        {"destinatario_id": user["sub"]},
+        {"_id": 0}
+    ).sort("fecha", -1).to_list(50)
+    return notifications
+
+@api_router.get("/notifications/unread-count")
+async def get_unread_notifications_count(user: dict = Depends(get_current_user)):
+    """Obtener conteo de notificaciones no leídas"""
+    count = await db.notifications.count_documents({
+        "destinatario_id": user["sub"],
+        "leida": False
+    })
+    return {"count": count}
+
+@api_router.post("/notifications/{notification_id}/read")
+async def mark_notification_read(notification_id: str, user: dict = Depends(get_current_user)):
+    """Marcar notificación como leída"""
+    await db.notifications.update_one(
+        {"id": notification_id, "destinatario_id": user["sub"]},
+        {"$set": {"leida": True}}
+    )
+    return {"message": "Notificación marcada como leída"}
+
+@api_router.post("/notifications/read-all")
+async def mark_all_notifications_read(user: dict = Depends(get_current_user)):
+    """Marcar todas las notificaciones como leídas"""
+    await db.notifications.update_many(
+        {"destinatario_id": user["sub"], "leida": False},
+        {"$set": {"leida": True}}
+    )
+    return {"message": "Todas las notificaciones marcadas como leídas"}
 
 @api_router.get("/cashbox/history")
 async def get_cashbox_history(
