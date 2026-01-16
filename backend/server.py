@@ -1665,6 +1665,137 @@ async def get_cartera_regional(user: dict = Depends(get_current_user)):
         "totales": total_regional
     }
 
+@api_router.get("/stats/supervisor-dashboard")
+async def get_supervisor_dashboard(user: dict = Depends(get_current_user)):
+    """Dashboard en tiempo real para supervisores con métricas de rendimiento"""
+    check_role(user, ["desarrollador", "administrador", "gerente_regional", "supervisor"])
+    
+    region = user.get("region")
+    today = datetime.now(timezone.utc).strftime("%Y-%m-%d")
+    today_start = datetime.strptime(today, "%Y-%m-%d").replace(tzinfo=timezone.utc)
+    today_end = today_start + timedelta(days=1)
+    
+    # Obtener asesores del supervisor
+    asesor_query = {"rol": "asesor", "activo": True}
+    if user["rol"] == "supervisor":
+        asesor_query["supervisor_id"] = user["sub"]
+    elif region:
+        asesor_query["region"] = region
+    
+    asesores = await db.users.find(asesor_query, {"_id": 0}).to_list(100)
+    asesor_ids = [a["id"] for a in asesores]
+    
+    # Métricas generales de rendimiento
+    total_pagos_esperados_hoy = 0
+    total_pagos_realizados_hoy = 0
+    total_monto_esperado = 0
+    total_monto_cobrado = 0
+    
+    # Alertas de cobranza del día
+    alertas_hoy = []
+    alertas_atrasadas = []
+    
+    # Obtener créditos activos de los asesores
+    credit_query = {"estatus": {"$in": ["vigente", "atrasado"]}}
+    if asesor_ids:
+        credit_query["asesor_id"] = {"$in": asesor_ids}
+    elif region:
+        credit_query["region"] = region
+    
+    creditos = await db.credits.find(credit_query, {"_id": 0}).to_list(1000)
+    
+    for credito in creditos:
+        for pago in credito.get("calendario_pagos", []):
+            if pago["pagado"]:
+                continue
+            if pago["fecha"] == today:
+                total_pagos_esperados_hoy += 1
+                total_monto_esperado += pago["monto"]
+                alertas_hoy.append({
+                    "credito_id": credito["id"],
+                    "cliente_nombre": credito["cliente_nombre"],
+                    "monto": pago["monto"],
+                    "tipo_credito": credito.get("tipo_credito", "diario")
+                })
+            elif pago["fecha"] < today:
+                fecha_pago = datetime.strptime(pago["fecha"], "%Y-%m-%d")
+                dias_atraso = (today_start.replace(tzinfo=None) - fecha_pago).days
+                alertas_atrasadas.append({
+                    "credito_id": credito["id"],
+                    "cliente_nombre": credito["cliente_nombre"],
+                    "monto": pago["monto"],
+                    "dias_atraso": dias_atraso,
+                    "tipo_credito": credito.get("tipo_credito", "diario")
+                })
+            break
+    
+    # Pagos realizados hoy
+    payment_query = {"fecha_pago": {"$gte": today_start.isoformat(), "$lt": today_end.isoformat()}}
+    if asesor_ids:
+        payment_query["registrado_por"] = {"$in": asesor_ids}
+    elif region:
+        payment_query["region"] = region
+    
+    pagos_hoy = await db.payments.find(payment_query, {"_id": 0}).to_list(1000)
+    total_pagos_realizados_hoy = len(pagos_hoy)
+    total_monto_cobrado = sum(p["monto"] for p in pagos_hoy)
+    
+    # Calcular porcentaje de cobro
+    porcentaje_cobro = 0
+    if total_monto_esperado > 0:
+        porcentaje_cobro = round((total_monto_cobrado / total_monto_esperado) * 100, 1)
+    
+    # Desembolsos pendientes de aprobación (créditos autorizados sin desembolsar)
+    desembolsos_pendientes = await db.credits.find({
+        "estatus": "autorizado",
+        **({"region": region} if region else {})
+    }, {"_id": 0}).to_list(100)
+    
+    # Rendimiento por asesor
+    rendimiento_asesores = []
+    for asesor in asesores:
+        asesor_pagos = [p for p in pagos_hoy if p.get("registrado_por") == asesor["id"]]
+        asesor_esperados = sum(1 for a in alertas_hoy + alertas_atrasadas 
+                               for c in creditos 
+                               if c["id"] == a["credito_id"] and c.get("asesor_id") == asesor["id"])
+        
+        rendimiento_asesores.append({
+            "id": asesor["id"],
+            "nombre": asesor["nombre_completo"],
+            "region": asesor.get("region", ""),
+            "pagos_realizados": len(asesor_pagos),
+            "monto_cobrado": sum(p["monto"] for p in asesor_pagos),
+            "alertas_pendientes": asesor_esperados
+        })
+    
+    # Ordenar por monto cobrado
+    rendimiento_asesores.sort(key=lambda x: x["monto_cobrado"], reverse=True)
+    
+    return {
+        "timestamp": datetime.now(timezone.utc).isoformat(),
+        "metricas": {
+            "pagos_esperados_hoy": total_pagos_esperados_hoy,
+            "pagos_realizados_hoy": total_pagos_realizados_hoy,
+            "monto_esperado_hoy": total_monto_esperado,
+            "monto_cobrado_hoy": total_monto_cobrado,
+            "porcentaje_cobro": porcentaje_cobro,
+            "pagos_atrasados": len(alertas_atrasadas),
+            "desembolsos_pendientes": len(desembolsos_pendientes)
+        },
+        "alertas": {
+            "hoy": alertas_hoy[:10],
+            "atrasados": sorted(alertas_atrasadas, key=lambda x: -x["dias_atraso"])[:10]
+        },
+        "desembolsos_pendientes": [{
+            "id": d["id"],
+            "cliente_nombre": d["cliente_nombre"],
+            "monto": d["monto_otorgado"],
+            "fecha_autorizacion": d.get("fecha_autorizacion", "")
+        } for d in desembolsos_pendientes[:5]],
+        "rendimiento_asesores": rendimiento_asesores,
+        "region": region
+    }
+
 # ============== LOGS ROUTES ==============
 @api_router.get("/logs")
 async def get_logs(
