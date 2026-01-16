@@ -404,7 +404,7 @@ export default function CobranzaPage() {
           </CardContent>
         </Card>
       ) : (
-        <div className="space-y-4">
+        <div className="space-y-6">
           {/* Atrasados First */}
           {alertsAtrasados.length > 0 && (
             <div>
@@ -420,18 +420,26 @@ export default function CobranzaPage() {
                     data-testid={`alert-atrasado-${index}`}
                   >
                     <CardContent className="p-4">
-                      <div className="flex items-center justify-between">
+                      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
                         <div className="flex items-center gap-4">
                           {getAlertIcon(alert.tipo)}
                           <div>
-                            <h3 className="font-medium text-gray-900">{alert.cliente_nombre}</h3>
+                            <div className="flex items-center gap-2 mb-1">
+                              <h3 className="font-medium text-gray-900">{alert.cliente_nombre}</h3>
+                              {getTipoCreditoBadge(alert.tipo_credito)}
+                            </div>
                             <p className="text-sm text-gray-500">
                               Vencido: {alert.fecha_pago}
                             </p>
+                            {alert.cliente_telefono && (
+                              <p className="text-sm text-gray-500 flex items-center gap-1">
+                                <Phone className="w-3 h-3" /> {alert.cliente_telefono}
+                              </p>
+                            )}
                           </div>
                         </div>
                         <div className="flex items-center gap-2">
-                          <div className="text-right mr-4">
+                          <div className="text-right mr-2">
                             {getAlertBadge(alert.tipo, alert.dias_atraso)}
                             <p className="font-heading text-xl font-bold mt-1">
                               {formatCurrency(alert.monto_pendiente)}
@@ -456,6 +464,16 @@ export default function CobranzaPage() {
                             >
                               <XCircle className="w-4 h-4 mr-1" />
                               No Pagó
+                            </Button>
+                            <Button
+                              size="sm"
+                              variant="outline"
+                              className="border-blue-300 text-blue-600 hover:bg-blue-50"
+                              onClick={(e) => openMap(alert, e)}
+                              data-testid={`map-btn-${index}`}
+                            >
+                              <Navigation className="w-4 h-4 mr-1" />
+                              Mapa
                             </Button>
                           </div>
                         </div>
@@ -482,18 +500,26 @@ export default function CobranzaPage() {
                     data-testid={`alert-hoy-${index}`}
                   >
                     <CardContent className="p-4">
-                      <div className="flex items-center justify-between">
+                      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
                         <div className="flex items-center gap-4">
                           {getAlertIcon(alert.tipo)}
                           <div>
-                            <h3 className="font-medium text-gray-900">{alert.cliente_nombre}</h3>
+                            <div className="flex items-center gap-2 mb-1">
+                              <h3 className="font-medium text-gray-900">{alert.cliente_nombre}</h3>
+                              {getTipoCreditoBadge(alert.tipo_credito)}
+                            </div>
                             <p className="text-sm text-gray-500">
                               Fecha: {alert.fecha_pago}
                             </p>
+                            {alert.cliente_telefono && (
+                              <p className="text-sm text-gray-500 flex items-center gap-1">
+                                <Phone className="w-3 h-3" /> {alert.cliente_telefono}
+                              </p>
+                            )}
                           </div>
                         </div>
                         <div className="flex items-center gap-2">
-                          <div className="text-right mr-4">
+                          <div className="text-right mr-2">
                             {getAlertBadge(alert.tipo)}
                             <p className="font-heading text-xl font-bold mt-1">
                               {formatCurrency(alert.monto_pendiente)}
@@ -517,6 +543,15 @@ export default function CobranzaPage() {
                               <XCircle className="w-4 h-4 mr-1" />
                               No Pagó
                             </Button>
+                            <Button
+                              size="sm"
+                              variant="outline"
+                              className="border-blue-300 text-blue-600 hover:bg-blue-50"
+                              onClick={(e) => openMap(alert, e)}
+                            >
+                              <Navigation className="w-4 h-4 mr-1" />
+                              Mapa
+                            </Button>
                           </div>
                         </div>
                       </div>
@@ -527,46 +562,201 @@ export default function CobranzaPage() {
             </div>
           )}
 
-          {/* Próximos a Vencer */}
-          {alertsPorVencer.length > 0 && (
+          {/* Próximos a Vencer - Semanales */}
+          {alertsSemanales.length > 0 && (
             <div>
-              <h2 className="font-heading text-lg font-bold text-yellow-600 mb-3 flex items-center gap-2">
-                <Calendar className="w-5 h-5" />
-                PRÓXIMOS A VENCER
+              <h2 className="font-heading text-lg font-bold text-purple-600 mb-3 flex items-center gap-2">
+                <CalendarDays className="w-5 h-5" />
+                POR VENCER - SEMANALES
               </h2>
               <div className="space-y-3">
-                {alertsPorVencer.map((alert, index) => (
+                {alertsSemanales.map((alert, index) => (
                   <Card
                     key={`${alert.credito_id}-${index}`}
-                    className={`${getAlertCardClass(alert.tipo)}`}
-                    data-testid={`alert-proximo-${index}`}
+                    className="border-l-4 border-l-purple-500 bg-purple-50"
+                    data-testid={`alert-semanal-${index}`}
                   >
                     <CardContent className="p-4">
-                      <div className="flex items-center justify-between">
+                      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
                         <div className="flex items-center gap-4">
-                          {getAlertIcon(alert.tipo)}
+                          <CalendarDays className="w-6 h-6 text-purple-500" />
                           <div>
-                            <h3 className="font-medium text-gray-900">{alert.cliente_nombre}</h3>
+                            <div className="flex items-center gap-2 mb-1">
+                              <h3 className="font-medium text-gray-900">{alert.cliente_nombre}</h3>
+                              {getTipoCreditoBadge(alert.tipo_credito)}
+                            </div>
                             <p className="text-sm text-gray-500">
-                              Fecha: {alert.fecha_pago}
+                              Vence: {alert.fecha_pago}
                             </p>
+                            {alert.cliente_telefono && (
+                              <p className="text-sm text-gray-500 flex items-center gap-1">
+                                <Phone className="w-3 h-3" /> {alert.cliente_telefono}
+                              </p>
+                            )}
                           </div>
                         </div>
                         <div className="flex items-center gap-2">
-                          <div className="text-right mr-4">
+                          <div className="text-right mr-2">
+                            <Badge className="bg-purple-100 text-purple-800">Próximo</Badge>
+                            <p className="font-heading text-xl font-bold mt-1">
+                              {formatCurrency(alert.monto_pendiente)}
+                            </p>
+                          </div>
+                          <div className="flex flex-col gap-2">
+                            <Button
+                              size="sm"
+                              variant="outline"
+                              onClick={() => handleSelectAlert(alert, "payment")}
+                            >
+                              <DollarSign className="w-4 h-4 mr-1" />
+                              Adelantar
+                            </Button>
+                            <Button
+                              size="sm"
+                              variant="outline"
+                              className="border-blue-300 text-blue-600 hover:bg-blue-50"
+                              onClick={(e) => openMap(alert, e)}
+                            >
+                              <Navigation className="w-4 h-4 mr-1" />
+                              Mapa
+                            </Button>
+                          </div>
+                        </div>
+                      </div>
+                    </CardContent>
+                  </Card>
+                ))}
+              </div>
+            </div>
+          )}
+
+          {/* Próximos a Vencer - Catorcenales */}
+          {alertsCatorcenales.length > 0 && (
+            <div>
+              <h2 className="font-heading text-lg font-bold text-indigo-600 mb-3 flex items-center gap-2">
+                <CalendarRange className="w-5 h-5" />
+                POR VENCER - CATORCENALES
+              </h2>
+              <div className="space-y-3">
+                {alertsCatorcenales.map((alert, index) => (
+                  <Card
+                    key={`${alert.credito_id}-${index}`}
+                    className="border-l-4 border-l-indigo-500 bg-indigo-50"
+                    data-testid={`alert-catorcenal-${index}`}
+                  >
+                    <CardContent className="p-4">
+                      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
+                        <div className="flex items-center gap-4">
+                          <CalendarRange className="w-6 h-6 text-indigo-500" />
+                          <div>
+                            <div className="flex items-center gap-2 mb-1">
+                              <h3 className="font-medium text-gray-900">{alert.cliente_nombre}</h3>
+                              {getTipoCreditoBadge(alert.tipo_credito)}
+                            </div>
+                            <p className="text-sm text-gray-500">
+                              Vence: {alert.fecha_pago}
+                            </p>
+                            {alert.cliente_telefono && (
+                              <p className="text-sm text-gray-500 flex items-center gap-1">
+                                <Phone className="w-3 h-3" /> {alert.cliente_telefono}
+                              </p>
+                            )}
+                          </div>
+                        </div>
+                        <div className="flex items-center gap-2">
+                          <div className="text-right mr-2">
+                            <Badge className="bg-indigo-100 text-indigo-800">Próximo</Badge>
+                            <p className="font-heading text-xl font-bold mt-1">
+                              {formatCurrency(alert.monto_pendiente)}
+                            </p>
+                          </div>
+                          <div className="flex flex-col gap-2">
+                            <Button
+                              size="sm"
+                              variant="outline"
+                              onClick={() => handleSelectAlert(alert, "payment")}
+                            >
+                              <DollarSign className="w-4 h-4 mr-1" />
+                              Adelantar
+                            </Button>
+                            <Button
+                              size="sm"
+                              variant="outline"
+                              className="border-blue-300 text-blue-600 hover:bg-blue-50"
+                              onClick={(e) => openMap(alert, e)}
+                            >
+                              <Navigation className="w-4 h-4 mr-1" />
+                              Mapa
+                            </Button>
+                          </div>
+                        </div>
+                      </div>
+                    </CardContent>
+                  </Card>
+                ))}
+              </div>
+            </div>
+          )}
+
+          {/* Próximos a Vencer - Diarios */}
+          {alertsDiarios.length > 0 && (
+            <div>
+              <h2 className="font-heading text-lg font-bold text-yellow-600 mb-3 flex items-center gap-2">
+                <Calendar className="w-5 h-5" />
+                POR VENCER - DIARIOS
+              </h2>
+              <div className="space-y-3">
+                {alertsDiarios.map((alert, index) => (
+                  <Card
+                    key={`${alert.credito_id}-${index}`}
+                    className={`${getAlertCardClass(alert.tipo)}`}
+                    data-testid={`alert-diario-${index}`}
+                  >
+                    <CardContent className="p-4">
+                      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
+                        <div className="flex items-center gap-4">
+                          {getAlertIcon(alert.tipo)}
+                          <div>
+                            <div className="flex items-center gap-2 mb-1">
+                              <h3 className="font-medium text-gray-900">{alert.cliente_nombre}</h3>
+                              {getTipoCreditoBadge(alert.tipo_credito)}
+                            </div>
+                            <p className="text-sm text-gray-500">
+                              Fecha: {alert.fecha_pago}
+                            </p>
+                            {alert.cliente_telefono && (
+                              <p className="text-sm text-gray-500 flex items-center gap-1">
+                                <Phone className="w-3 h-3" /> {alert.cliente_telefono}
+                              </p>
+                            )}
+                          </div>
+                        </div>
+                        <div className="flex items-center gap-2">
+                          <div className="text-right mr-2">
                             {getAlertBadge(alert.tipo)}
                             <p className="font-heading text-xl font-bold mt-1">
                               {formatCurrency(alert.monto_pendiente)}
                             </p>
                           </div>
-                          <Button
-                            size="sm"
-                            variant="outline"
-                            onClick={() => handleSelectAlert(alert, "payment")}
-                          >
-                            <DollarSign className="w-4 h-4 mr-1" />
-                            Adelantar Pago
-                          </Button>
+                          <div className="flex flex-col gap-2">
+                            <Button
+                              size="sm"
+                              variant="outline"
+                              onClick={() => handleSelectAlert(alert, "payment")}
+                            >
+                              <DollarSign className="w-4 h-4 mr-1" />
+                              Adelantar
+                            </Button>
+                            <Button
+                              size="sm"
+                              variant="outline"
+                              className="border-blue-300 text-blue-600 hover:bg-blue-50"
+                              onClick={(e) => openMap(alert, e)}
+                            >
+                              <Navigation className="w-4 h-4 mr-1" />
+                              Mapa
+                            </Button>
+                          </div>
                         </div>
                       </div>
                     </CardContent>
