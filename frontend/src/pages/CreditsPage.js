@@ -532,11 +532,11 @@ export default function CreditsPage() {
             <TableHeader>
               <TableRow>
                 <TableHead>Cliente</TableHead>
+                <TableHead>Localidad</TableHead>
                 <TableHead>Tipo</TableHead>
                 <TableHead>Monto</TableHead>
                 <TableHead>Saldo</TableHead>
                 <TableHead>Pagos</TableHead>
-                <TableHead>Fecha Inicio</TableHead>
                 <TableHead>Estatus</TableHead>
                 <TableHead className="text-right">Acciones</TableHead>
               </TableRow>
@@ -563,13 +563,18 @@ export default function CreditsPage() {
                     data-testid={`credit-row-${credit.id}`}
                   >
                     <TableCell className="font-medium">{credit.cliente_nombre}</TableCell>
+                    <TableCell>
+                      <Badge variant="outline" className="text-xs">
+                        <MapPin className="w-3 h-3 mr-1" />
+                        {getLocalidadName(credit.region)}
+                      </Badge>
+                    </TableCell>
                     <TableCell className="capitalize">{credit.tipo_credito}</TableCell>
                     <TableCell className="text-green-600 font-medium">
                       {formatCurrency(credit.monto_otorgado)}
                     </TableCell>
                     <TableCell>{formatCurrency(credit.saldo_pendiente)}</TableCell>
                     <TableCell>{credit.pagos_realizados}/{credit.plazo}</TableCell>
-                    <TableCell>{credit.fecha_inicio}</TableCell>
                     <TableCell>{getStatusBadge(credit.estatus)}</TableCell>
                     <TableCell className="text-right">
                       <Button variant="ghost" size="sm">
