@@ -810,41 +810,118 @@ export default function DesembolsosPage() {
         </AlertDialogContent>
       </AlertDialog>
 
-      {/* Execute Dialog */}
-      <AlertDialog open={actionType === "execute"} onOpenChange={() => setActionType(null)}>
-        <AlertDialogContent>
-          <AlertDialogHeader>
-            <AlertDialogTitle className="flex items-center gap-2">
+      {/* Execute Dialog - With Evidence Photo */}
+      <Dialog open={actionType === "execute"} onOpenChange={() => {
+        setActionType(null);
+        setEvidenciaDesembolso(null);
+      }}>
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
               <Play className="w-5 h-5 text-blue-600" />
               Ejecutar Desembolso
-            </AlertDialogTitle>
-            <AlertDialogDescription>
-              <p className="mb-4">
-                Al ejecutar este desembolso se creará el crédito para el cliente.
+            </DialogTitle>
+            <DialogDescription>
+              Al ejecutar este desembolso se creará el crédito para el cliente.
+            </DialogDescription>
+          </DialogHeader>
+          
+          <div className="space-y-4 py-4">
+            {/* Disbursement Info */}
+            <div className="p-4 bg-blue-50 rounded-lg">
+              <p className="font-medium">{selectedDisbursement?.cliente_nombre}</p>
+              <p className="text-lg font-bold text-blue-600">
+                {formatCurrency(selectedDisbursement?.monto)}
               </p>
-              <div className="p-4 bg-blue-50 rounded-lg">
-                <p className="font-medium">{selectedDisbursement?.cliente_nombre}</p>
-                <p className="text-lg font-bold text-blue-600">
-                  {formatCurrency(selectedDisbursement?.monto)}
-                </p>
-                <p className="text-sm text-gray-600">
-                  {selectedDisbursement?.tipo_credito} • {selectedDisbursement?.plazo} pagos
-                </p>
+              <p className="text-sm text-gray-600">
+                {selectedDisbursement?.tipo_credito} • {selectedDisbursement?.plazo} pagos
+              </p>
+              <p className="text-sm text-gray-500 mt-1">
+                Fecha: {selectedDisbursement?.fecha_desembolso}
+              </p>
+            </div>
+            
+            {/* Evidence Photo - Required */}
+            <div className="space-y-2">
+              <Label className="flex items-center gap-2 text-blue-700">
+                <Camera className="w-4 h-4" />
+                Foto de Evidencia del Desembolso *
+              </Label>
+              <p className="text-xs text-gray-500">
+                Tome una foto del cliente recibiendo el dinero o del recibo firmado
+              </p>
+              <div className="border-2 border-dashed border-blue-300 rounded-lg p-4 bg-blue-50/50">
+                {evidenciaDesembolso ? (
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-2">
+                      <Image className="w-5 h-5 text-green-600" />
+                      <span className="text-sm text-green-600 truncate max-w-[180px]">
+                        {evidenciaDesembolso.name}
+                      </span>
+                    </div>
+                    <Button
+                      type="button"
+                      variant="ghost"
+                      size="sm"
+                      onClick={() => setEvidenciaDesembolso(null)}
+                    >
+                      <XCircle className="w-4 h-4 text-red-500" />
+                    </Button>
+                  </div>
+                ) : (
+                  <label className="flex flex-col items-center cursor-pointer">
+                    <Camera className="w-10 h-10 text-blue-400 mb-2" />
+                    <span className="text-sm text-blue-600 font-medium">
+                      Tomar foto o seleccionar
+                    </span>
+                    <span className="text-xs text-gray-400 mt-1">
+                      Requerido para ejecutar
+                    </span>
+                    <input
+                      type="file"
+                      accept="image/*"
+                      capture="environment"
+                      className="hidden"
+                      onChange={(e) => setEvidenciaDesembolso(e.target.files[0])}
+                      data-testid="evidence-photo-input"
+                    />
+                  </label>
+                )}
               </div>
-            </AlertDialogDescription>
-          </AlertDialogHeader>
-          <AlertDialogFooter>
-            <AlertDialogCancel>Cancelar</AlertDialogCancel>
-            <AlertDialogAction
-              className="bg-blue-600 hover:bg-blue-700"
-              onClick={handleExecute}
+            </div>
+          </div>
+          
+          <DialogFooter>
+            <Button 
+              variant="outline" 
+              onClick={() => {
+                setActionType(null);
+                setEvidenciaDesembolso(null);
+              }}
             >
-              <Play className="w-4 h-4 mr-2" />
-              Ejecutar y Crear Crédito
-            </AlertDialogAction>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
+              Cancelar
+            </Button>
+            <Button 
+              className="bg-blue-600 hover:bg-blue-700" 
+              onClick={handleExecute}
+              disabled={!evidenciaDesembolso || isUploading}
+              data-testid="execute-disbursement-btn"
+            >
+              {isUploading ? (
+                <>
+                  <RefreshCw className="w-4 h-4 mr-2 animate-spin" />
+                  Subiendo...
+                </>
+              ) : (
+                <>
+                  <Play className="w-4 h-4 mr-2" />
+                  Ejecutar y Crear Crédito
+                </>
+              )}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
