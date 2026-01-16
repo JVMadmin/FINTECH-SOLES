@@ -549,7 +549,7 @@ export default function UsersPage() {
             </div>
             <div className="p-3 bg-yellow-50 rounded-lg">
               <p className="font-medium text-yellow-800">Supervisor</p>
-              <p className="text-yellow-600 text-xs mt-1">Asigna cartera, valida información</p>
+              <p className="text-yellow-600 text-xs mt-1">Asigna cartera, autoriza créditos, registra pagos</p>
             </div>
             <div className="p-3 bg-gray-50 rounded-lg">
               <p className="font-medium text-gray-800">Asesor de Crédito</p>
@@ -558,6 +558,123 @@ export default function UsersPage() {
           </div>
         </CardContent>
       </Card>
+
+      {/* Edit User Dialog */}
+      <Dialog open={isEditDialogOpen} onOpenChange={setIsEditDialogOpen}>
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle className="font-heading text-xl uppercase flex items-center gap-2">
+              <Edit className="w-5 h-5 text-blue-500" />
+              Editar Usuario
+            </DialogTitle>
+            <DialogDescription>
+              Modifique los datos del usuario {selectedUser?.username}
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4 py-4">
+            <div className="space-y-2">
+              <Label>Nombre Completo</Label>
+              <Input
+                value={editUser.nombre_completo}
+                onChange={(e) => setEditUser({ ...editUser, nombre_completo: e.target.value })}
+                placeholder="Nombre completo"
+              />
+            </div>
+            <div className="space-y-2">
+              <Label>Teléfono</Label>
+              <Input
+                value={editUser.telefono}
+                onChange={(e) => setEditUser({ ...editUser, telefono: e.target.value })}
+                placeholder="Número de teléfono"
+              />
+            </div>
+            {hasRole(["desarrollador", "administrador"]) && (
+              <div className="space-y-2">
+                <Label>Localidad</Label>
+                <Select
+                  value={editUser.region}
+                  onValueChange={(value) => setEditUser({ ...editUser, region: value })}
+                >
+                  <SelectTrigger>
+                    <SelectValue placeholder="Seleccionar localidad" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {LOCALIDADES.map((loc) => (
+                      <SelectItem key={loc.id} value={loc.id}>
+                        {loc.tipo === "sede" ? "📍 " : ""}{loc.nombre}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+            )}
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setIsEditDialogOpen(false)}>
+              Cancelar
+            </Button>
+            <Button className="bg-blue-600 hover:bg-blue-700" onClick={handleSaveEdit}>
+              Guardar Cambios
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Change Password Dialog */}
+      <Dialog open={isPasswordDialogOpen} onOpenChange={setIsPasswordDialogOpen}>
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle className="font-heading text-xl uppercase flex items-center gap-2">
+              <Key className="w-5 h-5 text-yellow-600" />
+              Cambiar Contraseña
+            </DialogTitle>
+            <DialogDescription>
+              Establezca una nueva contraseña para {selectedUser?.nombre_completo}
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4 py-4">
+            <div className="space-y-2">
+              <Label>Nueva Contraseña</Label>
+              <Input
+                type="password"
+                value={newPassword}
+                onChange={(e) => setNewPassword(e.target.value)}
+                placeholder="Mínimo 6 caracteres"
+              />
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setIsPasswordDialogOpen(false)}>
+              Cancelar
+            </Button>
+            <Button className="bg-yellow-600 hover:bg-yellow-700" onClick={handleChangePassword}>
+              Cambiar Contraseña
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Delete Confirmation Dialog */}
+      <AlertDialog open={isDeleteDialogOpen} onOpenChange={setIsDeleteDialogOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>¿Desactivar usuario?</AlertDialogTitle>
+            <AlertDialogDescription>
+              Esta acción desactivará al usuario {selectedUser?.nombre_completo}. 
+              El usuario no podrá acceder al sistema hasta que sea reactivado.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancelar</AlertDialogCancel>
+            <AlertDialogAction
+              className="bg-red-600 hover:bg-red-700"
+              onClick={handleDeleteUser}
+            >
+              Desactivar
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }
