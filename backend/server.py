@@ -1896,10 +1896,10 @@ async def reject_disbursement(
 @api_router.post("/disbursements/{disbursement_id}/execute")
 async def execute_disbursement(
     disbursement_id: str,
-    evidencia_url: str = "",
+    evidencia_desembolso_url: str = "",
     user: dict = Depends(get_current_user)
 ):
-    """Ejecutar desembolso aprobado y crear el crédito"""
+    """Ejecutar desembolso aprobado y crear el crédito - Requiere evidencia fotográfica"""
     check_role(user, ["desarrollador", "administrador", "gerente_regional", "supervisor", "asesor"])
     
     disbursement = await db.disbursements.find_one({"id": disbursement_id}, {"_id": 0})
@@ -1908,6 +1908,10 @@ async def execute_disbursement(
     
     if disbursement["estatus"] != "aprobado":
         raise HTTPException(status_code=400, detail="El desembolso debe estar aprobado para ejecutarse")
+    
+    # Verificar evidencia de desembolso
+    if not evidencia_desembolso_url:
+        raise HTTPException(status_code=400, detail="Se requiere foto de evidencia del desembolso")
     
     # Crear el crédito
     client = await db.clients.find_one({"id": disbursement["cliente_id"]}, {"_id": 0})
@@ -1941,7 +1945,8 @@ async def execute_disbursement(
         "region": disbursement.get("region", client.get("region")),
         "es_renovacion": disbursement["es_renovacion"],
         "credito_anterior_id": disbursement.get("credito_anterior_id"),
-        "evidencia_desembolso": evidencia_url,
+        "evidencia_desembolso": evidencia_desembolso_url,
+        "evidencia_tarjeta": disbursement.get("evidencia_tarjeta_url"),
         "desembolso_id": disbursement_id
     }
     
@@ -1952,6 +1957,7 @@ async def execute_disbursement(
         {"id": disbursement_id},
         {"$set": {
             "estatus": "ejecutado",
+            "evidencia_desembolso_url": evidencia_desembolso_url,
             "credito_generado_id": credit_data["id"],
             "fecha_ejecucion": datetime.now(timezone.utc).isoformat()
         }}
