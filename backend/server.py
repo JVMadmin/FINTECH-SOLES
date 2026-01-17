@@ -708,33 +708,6 @@ async def deactivate_user(user_id: str, user: dict = Depends(get_current_user)):
     
     return {"message": "Usuario desactivado"}
 
-@api_router.get("/users/asesores/region/{region}")
-async def get_asesores_by_region(region: str, user: dict = Depends(get_current_user)):
-    check_role(user, ["desarrollador", "administrador", "gerente_regional", "supervisor"])
-    
-    # Verificar acceso por región
-    if user["rol"] in ["gerente_regional", "supervisor"] and user["region"] != region:
-        raise HTTPException(status_code=403, detail="No tiene acceso a esta región")
-    
-    asesores = await db.users.find(
-        {"region": region, "rol": "asesor", "activo": True},
-        {"_id": 0, "password": 0}
-    ).to_list(100)
-    
-    return asesores
-
-@api_router.get("/users/asesores/all")
-async def get_all_asesores(user: dict = Depends(get_current_user)):
-    """Obtener todos los asesores - Solo para desarrollador/administrador"""
-    check_role(user, ["desarrollador", "administrador"])
-    
-    asesores = await db.users.find(
-        {"rol": "asesor", "activo": True},
-        {"_id": 0, "password": 0}
-    ).to_list(100)
-    
-    return asesores
-
 @api_router.post("/users/auto-assign-region")
 async def auto_assign_asesores_by_region(user: dict = Depends(get_current_user)):
     """Asignar automáticamente asesores a supervisores según su región"""
