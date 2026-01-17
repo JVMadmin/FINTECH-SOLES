@@ -53,25 +53,58 @@ export const exportToExcel = (data, columns, filename, sheetName = "Reporte") =>
   saveAs(dataBlob, `${filename}_${new Date().toISOString().split("T")[0]}.xlsx`);
 };
 
+// Logo URL for PDF
+const LOGO_URL = "/logo.png";
+
+// Helper function to load image as base64
+const loadImageAsBase64 = (url) => {
+  return new Promise((resolve, reject) => {
+    const img = new Image();
+    img.crossOrigin = "anonymous";
+    img.onload = () => {
+      const canvas = document.createElement("canvas");
+      canvas.width = img.width;
+      canvas.height = img.height;
+      const ctx = canvas.getContext("2d");
+      ctx.drawImage(img, 0, 0);
+      resolve(canvas.toDataURL("image/png"));
+    };
+    img.onerror = reject;
+    img.src = url;
+  });
+};
+
 // Export to PDF
-export const exportToPDF = (data, columns, filename, title, summary = null) => {
+export const exportToPDF = async (data, columns, filename, title, summary = null) => {
   const doc = new jsPDF();
   
-  // Header
+  // Try to add logo
+  try {
+    const logoBase64 = await loadImageAsBase64(LOGO_URL);
+    doc.addImage(logoBase64, "PNG", 14, 8, 25, 25);
+  } catch (e) {
+    console.log("Logo not loaded, continuing without it");
+  }
+  
+  // Header - adjusted position for logo
   doc.setFontSize(18);
   doc.setTextColor(41, 128, 185);
-  doc.text("SOLES CORPORATIVO", 105, 15, { align: "center" });
-  
-  doc.setFontSize(14);
-  doc.setTextColor(0, 0, 0);
-  doc.text(title, 105, 25, { align: "center" });
+  doc.text("SOLES CORPORATIVO", 115, 15, { align: "center" });
   
   doc.setFontSize(10);
   doc.setTextColor(100, 100, 100);
-  doc.text(`Generado: ${new Date().toLocaleString("es-MX")}`, 105, 32, { align: "center" });
+  doc.text("Sistema de Créditos", 115, 22, { align: "center" });
+  
+  doc.setFontSize(14);
+  doc.setTextColor(0, 0, 0);
+  doc.text(title, 115, 30, { align: "center" });
+  
+  doc.setFontSize(9);
+  doc.setTextColor(100, 100, 100);
+  doc.text(`Generado: ${new Date().toLocaleString("es-MX")}`, 196, 10, { align: "right" });
 
   // Summary section if provided
-  let startY = 40;
+  let startY = 42;
   if (summary) {
     doc.setFontSize(10);
     doc.setTextColor(0, 0, 0);
