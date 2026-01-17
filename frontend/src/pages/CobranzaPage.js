@@ -89,6 +89,10 @@ export default function CobranzaPage() {
   const [showMapModal, setShowMapModal] = useState(false);
   const [mapClientData, setMapClientData] = useState(null);
   
+  // Payment Ticket states
+  const [showTicket, setShowTicket] = useState(false);
+  const [ticketData, setTicketData] = useState(null);
+  
   const fileInputRef = useRef(null);
 
   useEffect(() => {
