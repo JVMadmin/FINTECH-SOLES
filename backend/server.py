@@ -586,16 +586,16 @@ async def get_unassigned_asesores(user: dict = Depends(get_current_user)):
     query = {
         "rol": "asesor",
         "activo": True,
-        "$or": [{"supervisor_id": None}, {"supervisor_id": ""}]
-    }
-    
-    # Supervisor solo ve asesores de su región o sin región
-    if user["rol"] == "supervisor":
-        query["$or"] = [
-            {"supervisor_id": None, "region": user["region"]},
-            {"supervisor_id": None, "region": None},
+        "$or": [
+            {"supervisor_id": None},
+            {"supervisor_id": {"$exists": False}},
             {"supervisor_id": ""}
         ]
+    }
+    
+    # Filtrar por región si es supervisor o gerente regional
+    if user["rol"] in ["supervisor", "gerente_regional"] and user.get("region"):
+        query["region"] = user["region"]
     
     asesores = await db.users.find(query, {"_id": 0, "password": 0}).to_list(100)
     return asesores
