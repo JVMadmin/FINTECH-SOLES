@@ -43,6 +43,7 @@ import {
   Store,
 } from "lucide-react";
 import { toast } from "sonner";
+import ClientScoreCard from "@/components/ClientScoreCard";
 
 const API = `${process.env.REACT_APP_BACKEND_URL}/api`;
 
