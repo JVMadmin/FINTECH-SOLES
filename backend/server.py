@@ -1137,6 +1137,27 @@ async def create_credit(data: CreditCreate, user: dict = Depends(get_current_use
     await log_action(user["sub"], user["nombre"], "crear_credito", "credito", credit_dict["id"],
                     {"cliente": client["nombre_completo"], "monto": data.monto_otorgado, "tipo": data.tipo_credito})
     
+    # Notificar al supervisor sobre la solicitud de crédito
+    if user["rol"] == "asesor" and user.get("supervisor_id"):
+        notification = {
+            "id": str(uuid.uuid4()),
+            "tipo": "solicitud_credito",
+            "titulo": "Nueva Solicitud de Crédito",
+            "mensaje": f"{user['nombre']} ha solicitado un crédito de {formatCurrency(data.monto_otorgado)} para {client['nombre_completo']}",
+            "destinatario_id": user["supervisor_id"],
+            "remitente_id": user["sub"],
+            "remitente_nombre": user["nombre"],
+            "fecha": datetime.now(timezone.utc).isoformat(),
+            "leida": False,
+            "datos": {
+                "credito_id": credit_dict["id"],
+                "cliente_nombre": client["nombre_completo"],
+                "monto": data.monto_otorgado,
+                "tipo": data.tipo_credito
+            }
+        }
+        await db.notifications.insert_one(notification)
+    
     return CreditResponse(**credit_dict)
 
 @api_router.get("/credits", response_model=List[CreditResponse])
