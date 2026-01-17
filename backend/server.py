@@ -2085,6 +2085,29 @@ async def create_disbursement_request(data: DisbursementRequest, user: dict = De
     await log_action(user["sub"], user["nombre"], "solicitar_desembolso", "desembolso", disbursement["id"],
                     {"cliente": client["nombre_completo"], "monto": data.monto, "fecha": data.fecha_desembolso})
     
+    # Notificar al supervisor sobre la solicitud de desembolso/renovación
+    if user["rol"] == "asesor" and user.get("supervisor_id"):
+        tipo_solicitud = "Renovación" if data.es_renovacion else "Desembolso"
+        notification = {
+            "id": str(uuid.uuid4()),
+            "tipo": "solicitud_desembolso",
+            "titulo": f"Nueva Solicitud de {tipo_solicitud}",
+            "mensaje": f"{user['nombre']} ha solicitado {tipo_solicitud.lower()} de {formatCurrency(data.monto)} para {client['nombre_completo']}",
+            "destinatario_id": user["supervisor_id"],
+            "remitente_id": user["sub"],
+            "remitente_nombre": user["nombre"],
+            "fecha": datetime.now(timezone.utc).isoformat(),
+            "leida": False,
+            "datos": {
+                "desembolso_id": disbursement["id"],
+                "cliente_nombre": client["nombre_completo"],
+                "monto": data.monto,
+                "es_renovacion": data.es_renovacion,
+                "fecha_desembolso": data.fecha_desembolso
+            }
+        }
+        await db.notifications.insert_one(notification)
+    
     return DisbursementResponse(**disbursement)
 
 @api_router.get("/disbursements")
