@@ -290,15 +290,13 @@ export default function CobranzaPage() {
   // Función para abrir mapa con coordenadas
   const openMap = (alert, e) => {
     e.stopPropagation();
-    if (alert.coordenadas_domicilio?.lat && alert.coordenadas_domicilio?.lng) {
-      const url = `https://www.google.com/maps/dir/?api=1&destination=${alert.coordenadas_domicilio.lat},${alert.coordenadas_domicilio.lng}`;
-      window.open(url, "_blank");
-    } else if (alert.cliente_direccion) {
-      const url = `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(alert.cliente_direccion)}`;
-      window.open(url, "_blank");
-    } else {
-      toast.error("No hay coordenadas o dirección disponible");
-    }
+    setMapClientData({
+      coordinates: alert.coordenadas_domicilio,
+      clientName: alert.cliente_nombre,
+      clientAddress: alert.cliente_direccion,
+      clientPhone: alert.cliente_telefono,
+    });
+    setShowMapModal(true);
   };
 
   const getTipoCreditoBadge = (tipo) => {
