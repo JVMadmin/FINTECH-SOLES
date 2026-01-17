@@ -1999,6 +1999,35 @@ async def close_regional_cashbox(data: CashBoxCreate, user: dict = Depends(get_c
     await log_action(user["sub"], user["nombre"], "cerrar_caja_regional", "caja", cashbox_data["id"],
                     {"total": total_cobrado, "pagos": len(payments), "asesores": len(asesores)})
     
+    # Notificar al gerente regional sobre el cierre de caja regional
+    if user["rol"] == "supervisor":
+        # Buscar gerente regional de la misma región
+        gerente = await db.users.find_one({
+            "rol": "gerente_regional",
+            "region": user.get("region"),
+            "activo": True
+        }, {"_id": 0})
+        
+        if gerente:
+            notification = {
+                "id": str(uuid.uuid4()),
+                "tipo": "cierre_caja_regional",
+                "titulo": "Caja Regional Cerrada",
+                "mensaje": f"{user['nombre']} ha cerrado la caja regional con {formatCurrency(total_cobrado)} ({len(payments)} pagos de {len(asesores)} asesores)",
+                "destinatario_id": gerente["id"],
+                "remitente_id": user["sub"],
+                "remitente_nombre": user["nombre"],
+                "fecha": datetime.now(timezone.utc).isoformat(),
+                "leida": False,
+                "datos": {
+                    "region": user.get("region"),
+                    "total_cobrado": total_cobrado,
+                    "numero_pagos": len(payments),
+                    "numero_asesores": len(asesores)
+                }
+            }
+            await db.notifications.insert_one(notification)
+    
     return {
         "message": "Caja regional cerrada exitosamente",
         "total": total_cobrado,
