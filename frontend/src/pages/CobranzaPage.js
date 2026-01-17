@@ -166,15 +166,29 @@ export default function CobranzaPage() {
 
   const handleRegisterPayment = async () => {
     try {
-      await axios.post(`${API}/payments`, {
+      const response = await axios.post(`${API}/payments`, {
         credito_id: selectedAlert.credito_id,
         monto: parseFloat(paymentAmount),
         metodo_pago: paymentMethod,
         notas: paymentNotes,
       });
       
+      // Prepare ticket data
+      setTicketData({
+        cliente_nombre: selectedAlert.cliente_nombre,
+        monto: parseFloat(paymentAmount),
+        fecha_pago: new Date().toISOString(),
+        metodo_pago: paymentMethod,
+        numero_pago: (selectedAlert.pagos_realizados || 0) + 1,
+        total_pagos: selectedAlert.numero_pagos || 0,
+        credito_id: selectedAlert.credito_id,
+        saldo_restante: (selectedAlert.monto_pendiente || 0) - parseFloat(paymentAmount),
+        registrado_por_nombre: user?.nombre || "Sistema",
+      });
+      
       toast.success("Pago registrado exitosamente");
       setShowConfirmDialog(false);
+      setShowTicket(true); // Show ticket
       setSelectedAlert(null);
       setPaymentAmount("");
       setPaymentNotes("");
