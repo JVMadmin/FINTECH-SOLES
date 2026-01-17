@@ -97,7 +97,7 @@ export const exportToPDF = (data, columns, filename, title, summary = null) => {
   });
 
   // Create table
-  doc.autoTable({
+  autoTable(doc, {
     head: [columns.map((col) => col.header)],
     body: tableData,
     startY: startY,
