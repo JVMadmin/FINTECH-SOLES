@@ -576,7 +576,11 @@ export default function ClientDetailPage() {
         </TabsContent>
 
         {/* Créditos Tab */}
-        <TabsContent value="creditos" className="mt-6">
+        <TabsContent value="creditos" className="mt-6 space-y-6">
+          {/* Score Card */}
+          <ClientScoreCard clientId={id} clientName={client?.nombre_completo} />
+          
+          {/* Credits History */}
           <Card>
             <CardHeader>
               <div className="flex items-center justify-between">
