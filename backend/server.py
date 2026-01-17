@@ -646,55 +646,6 @@ async def assign_asesor_to_supervisor(data: AssignAsesorRequest, user: dict = De
     
     return {"message": f"Asesor asignado al supervisor {supervisor['nombre_completo']}"}
 
-@api_router.get("/users/my-asesores")
-async def get_my_asesores(user: dict = Depends(get_current_user)):
-    """Obtener asesores asignados al supervisor actual"""
-    check_role(user, ["desarrollador", "administrador", "gerente_regional", "supervisor"])
-    
-    query = {"rol": "asesor", "activo": True}
-    
-    if user["rol"] == "supervisor":
-        query["supervisor_id"] = user["sub"]
-    elif user["rol"] == "gerente_regional":
-        query["region"] = user["region"]
-    
-    asesores = await db.users.find(query, {"_id": 0, "password": 0}).to_list(100)
-    return asesores
-
-@api_router.get("/users/unassigned-asesores")
-async def get_unassigned_asesores(user: dict = Depends(get_current_user)):
-    """Obtener asesores sin supervisor asignado"""
-    check_role(user, ["desarrollador", "administrador", "gerente_regional", "supervisor"])
-    
-    query = {
-        "rol": "asesor",
-        "activo": True,
-        "$or": [
-            {"supervisor_id": None},
-            {"supervisor_id": {"$exists": False}},
-            {"supervisor_id": ""}
-        ]
-    }
-    
-    # Filtrar por región si es supervisor o gerente regional
-    if user["rol"] in ["supervisor", "gerente_regional"] and user.get("region"):
-        query["region"] = user["region"]
-    
-    asesores = await db.users.find(query, {"_id": 0, "password": 0}).to_list(100)
-    return asesores
-
-@api_router.get("/users/supervisors-by-region/{region}")
-async def get_supervisors_by_region(region: str, user: dict = Depends(get_current_user)):
-    """Obtener supervisores de una región"""
-    check_role(user, ["desarrollador", "administrador", "gerente_regional"])
-    
-    supervisors = await db.users.find(
-        {"region": region, "rol": "supervisor", "activo": True},
-        {"_id": 0, "password": 0}
-    ).to_list(100)
-    
-    return supervisors
-
 @api_router.put("/users/{user_id}")
 async def update_user(user_id: str, data: dict, user: dict = Depends(get_current_user)):
     """Actualizar usuario - Admin, Gerente Regional y Supervisor"""
