@@ -151,7 +151,7 @@ export default function ReportesPage() {
     toast.success("Reporte Excel generado");
   };
 
-  const handleExportPDF = () => {
+  const handleExportPDF = async () => {
     if (reportData.length === 0) {
       toast.error("No hay datos para exportar");
       return;
@@ -164,7 +164,7 @@ export default function ReportesPage() {
       "Fecha": new Date().toLocaleDateString("es-MX"),
     };
     
-    exportToPDF(reportData, config.columns, `reporte_${selectedReport}`, config.title, summary);
+    await exportToPDF(reportData, config.columns, `reporte_${selectedReport}`, config.title, summary);
     toast.success("Reporte PDF generado");
   };
 
