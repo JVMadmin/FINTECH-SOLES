@@ -473,6 +473,89 @@ async def get_users(user: dict = Depends(get_current_user)):
     users = await db.users.find(query, {"_id": 0, "password": 0}).to_list(1000)
     return [UserResponse(**u) for u in users]
 
+@api_router.get("/users/unassigned-asesores")
+async def get_unassigned_asesores(user: dict = Depends(get_current_user)):
+    """Obtener asesores sin supervisor asignado"""
+    check_role(user, ["desarrollador", "administrador", "gerente_regional", "supervisor"])
+    
+    query = {
+        "rol": "asesor",
+        "activo": True,
+        "$or": [
+            {"supervisor_id": None},
+            {"supervisor_id": {"$exists": False}},
+            {"supervisor_id": ""}
+        ]
+    }
+    
+    # Filtrar por región si es supervisor o gerente regional
+    if user["rol"] in ["supervisor", "gerente_regional"] and user.get("region"):
+        query["region"] = user["region"]
+    
+    asesores = await db.users.find(query, {"_id": 0, "password": 0}).to_list(100)
+    return asesores
+
+@api_router.get("/users/my-asesores")
+async def get_my_asesores(user: dict = Depends(get_current_user)):
+    """Obtener los asesores asignados a un supervisor"""
+    check_role(user, ["desarrollador", "administrador", "gerente_regional", "supervisor"])
+    
+    supervisor_id = user["sub"]
+    
+    # Si es gerente o admin, puede ver todos
+    if user["rol"] in ["desarrollador", "administrador", "gerente_regional"]:
+        query = {"rol": "asesor", "activo": True}
+        if user["rol"] == "gerente_regional":
+            query["region"] = user["region"]
+    else:
+        query = {"supervisor_id": supervisor_id, "rol": "asesor", "activo": True}
+    
+    asesores = await db.users.find(query, {"_id": 0, "password": 0}).to_list(100)
+    return asesores
+
+@api_router.get("/users/supervisors-by-region/{region}")
+async def get_supervisors_by_region(region: str, user: dict = Depends(get_current_user)):
+    """Obtener supervisores de una región"""
+    check_role(user, ["desarrollador", "administrador", "gerente_regional"])
+    
+    supervisors = await db.users.find(
+        {"region": region, "rol": "supervisor", "activo": True},
+        {"_id": 0, "password": 0}
+    ).to_list(100)
+    
+    return supervisors
+
+@api_router.get("/users/asesores/region/{region}")
+async def get_asesores_by_region(region: str, user: dict = Depends(get_current_user)):
+    """Obtener asesores de una región específica"""
+    check_role(user, ["desarrollador", "administrador", "gerente_regional", "supervisor"])
+    
+    query = {
+        "rol": "asesor",
+        "activo": True,
+        "region": region
+    }
+    
+    asesores = await db.users.find(query, {"_id": 0, "password": 0}).to_list(100)
+    return asesores
+
+@api_router.get("/users/asesores/all")
+async def get_all_asesores(user: dict = Depends(get_current_user)):
+    """Obtener todos los asesores"""
+    check_role(user, ["desarrollador", "administrador", "gerente_regional", "supervisor"])
+    
+    query = {"rol": "asesor", "activo": True}
+    
+    # Filtrar por región si no es desarrollador o admin
+    if user["rol"] == "supervisor":
+        query["supervisor_id"] = user["sub"]
+    elif user["rol"] == "gerente_regional":
+        query["region"] = user["region"]
+    
+    asesores = await db.users.find(query, {"_id": 0, "password": 0}).to_list(100)
+    
+    return asesores
+
 @api_router.get("/users/{user_id}", response_model=UserResponse)
 async def get_user(user_id: str, user: dict = Depends(get_current_user)):
     check_role(user, ["desarrollador", "administrador", "gerente_regional", "supervisor"])
