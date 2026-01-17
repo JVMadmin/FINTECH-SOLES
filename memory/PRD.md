@@ -1,8 +1,8 @@
 # SOLES CORPORATIVO - Sistema de Créditos
 ## Product Requirements Document
 
-### Fecha de Actualización: 2025-01-16
-### Version: 1.3
+### Fecha de Actualización: 2025-01-17
+### Version: 1.4
 
 ---
 
@@ -66,43 +66,47 @@ Sistema financiero integral para SOLES CORPORATIVO – CRÉDITOS. Sistema de adm
 - Badge de tipo de crédito
 - Flujo "NO PAGO" con evidencia
 
-### ✅ Caja Regional del Supervisor (NUEVO)
+### ✅ Caja Regional del Supervisor
 - **Estado de Cierres del Día**: Progreso visual de cierres de asesores
 - **Tarjetas por asesor**: ✓ verde (cerrado) / ○ naranja (pendiente)
 - **Resumen por Localidad**: Totales por zona
 - **Cobros por Asesor**: Acordeón expandible con detalle de pagos
-- **Flujo de cierre jerárquico**:
-  1. Asesores cierran su caja individual
-  2. Supervisor ve en tiempo real quién ha cerrado
-  3. Botón "Cerrar Caja Regional" se habilita cuando TODOS cierran
+- **Flujo de cierre jerárquico**
 - **Filtros** por localidad y asesor
 
-### ✅ Dashboard de Supervisor en Tiempo Real (NUEVO)
+### ✅ Dashboard de Supervisor en Tiempo Real
 - **Tarjeta "Rendimiento del Día"** con badge "EN VIVO"
-  - Cobrado Hoy vs Esperado
-  - Pagos Realizados vs Esperados
-  - % de Cobro con barra de progreso
-  - Pagos Atrasados
 - **Alertas de Cobranza** con enlaces directos
 - **Desembolsos Pendientes** de aprobación
-- **Rendimiento de Asesores**: Ranking con medallas (oro, plata, bronce)
+- **Rendimiento de Asesores**: Ranking con medallas
 - **Auto-actualización cada 30 segundos**
 
-### ✅ Programación de Desembolsos (NUEVO)
+### ✅ Programación de Desembolsos (NUEVO v1.4)
 - **Solicitud de desembolso**: Asesor o Supervisor crean solicitud
+- **Evidencia fotográfica de tarjeta del cliente** al solicitar
+- **Evidencia fotográfica obligatoria** al ejecutar desembolso
 - **Renovaciones**: Cliente debe liquidar crédito anterior
-- **Selección de fecha de desembolso**
-- **Flujo de aprobación**:
-  1. Asesor solicita desembolso
-  2. Supervisor/Gerente aprueba o rechaza
-  3. Supervisor ejecuta desembolso (crea el crédito)
-- **Tabs**: Pendientes | Programados | Todas
-- **Dashboard**: Muestra desembolsos pendientes
+- **Flujo de aprobación**: Solicitar → Aprobar/Rechazar → Ejecutar
+
+### ✅ Sistema de Notificaciones (NUEVO v1.4)
+- **Botón de Notificaciones** en sidebar
+- **Dropdown con lista de notificaciones**
+- **Contador de no leídas** en badge
+- **Marcar como leída** individual o todas
+- **Polling automático** cada 30 segundos
+- **Notificaciones automáticas** cuando un asesor cierra caja
+
+### ✅ Asignación Automática por Región (NUEVO v1.4)
+- **Botón "Asignación Automática"** en página de Asignaciones
+- Asigna automáticamente asesores sin supervisor al supervisor de su misma región
+- Visible solo cuando hay asesores pendientes de asignar
+- Diálogo de confirmación antes de ejecutar
 
 ### ✅ Asignaciones
 - Asignación de supervisores a regiones
 - Asignación de asesores a supervisores
 - Vista jerárquica
+- Sección de asesores sin supervisor
 
 ### ✅ Auditoría
 - Log de todas las acciones
@@ -129,15 +133,14 @@ Sistema financiero integral para SOLES CORPORATIVO – CRÉDITOS. Sistema de adm
 ## Backlog Pendiente
 
 ### P1 (Próximas)
-- Evidencia fotográfica al desembolsar
 - Reportes exportables (PDF/Excel)
+- Integración de mapas embebidos (Leaflet)
 
 ### P2 (Futuro)
-- Asignaciones mejoradas (auto-asignar por zona)
-- Integración de mapas embebidos
 - Notificaciones WhatsApp
 - Firma digital
 - Score interno de clientes
+- Generación de tickets de pago
 
 ---
 
@@ -152,12 +155,25 @@ Sistema financiero integral para SOLES CORPORATIVO – CRÉDITOS. Sistema de adm
 - `POST /api/disbursements/{id}/reject` - Rechazar
 - `POST /api/disbursements/{id}/execute` - Ejecutar y crear crédito
 
+### Notificaciones (NUEVO)
+- `GET /api/notifications` - Obtener notificaciones del usuario
+- `GET /api/notifications/unread-count` - Contador de no leídas
+- `POST /api/notifications/{id}/read` - Marcar como leída
+- `POST /api/notifications/read-all` - Marcar todas como leídas
+
+### Usuarios
+- `GET /api/users/unassigned-asesores` - Asesores sin supervisor
+- `POST /api/users/auto-assign-region` - Asignación automática
+
 ### Caja
 - `GET /api/cashbox/asesores-status` - Estado de cierres de asesores
 - `POST /api/cashbox/close-regional` - Cerrar caja regional
 
 ### Dashboard
 - `GET /api/stats/supervisor-dashboard` - Dashboard en tiempo real
+
+### Archivos
+- `POST /api/upload` - Subir archivos (imágenes)
 
 ---
 
@@ -170,6 +186,11 @@ Sistema financiero integral para SOLES CORPORATIVO – CRÉDITOS. Sistema de adm
 ---
 
 ## Changelog
+- **v1.4 (2025-01-17)**:
+  - Evidencia fotográfica en desembolsos (tarjeta al solicitar, evidencia obligatoria al ejecutar)
+  - Sistema de notificaciones con UI en sidebar
+  - Asignación automática de asesores por región
+  - Corrección de rutas duplicadas en backend
 - **v1.3 (2025-01-16)**:
   - Cobranza: Secciones separadas por tipo, botón de mapa, 5 tarjetas resumen
   - Caja Regional: Estado de cierres, cierre jerárquico, filtros
