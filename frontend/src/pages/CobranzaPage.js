@@ -1076,6 +1076,13 @@ export default function CobranzaPage() {
         clientAddress={mapClientData?.clientAddress}
         clientPhone={mapClientData?.clientPhone}
       />
+
+      {/* Payment Ticket */}
+      <PaymentTicket
+        isOpen={showTicket}
+        onClose={() => setShowTicket(false)}
+        paymentData={ticketData}
+      />
     </div>
   );
 }
