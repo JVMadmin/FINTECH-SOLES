@@ -18,6 +18,7 @@ import CashboxPage from "@/pages/CashboxPage";
 import LogsPage from "@/pages/LogsPage";
 import AsignacionesPage from "@/pages/AsignacionesPage";
 import DesembolsosPage from "@/pages/DesembolsosPage";
+import ReportesPage from "@/pages/ReportesPage";
 
 // Context
 import { AuthProvider, useAuth } from "@/context/AuthContext";
