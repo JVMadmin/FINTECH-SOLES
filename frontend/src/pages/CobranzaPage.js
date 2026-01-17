@@ -1046,6 +1046,16 @@ export default function CobranzaPage() {
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
+
+      {/* Map Modal */}
+      <MapModal
+        isOpen={showMapModal}
+        onClose={() => setShowMapModal(false)}
+        coordinates={mapClientData?.coordinates}
+        clientName={mapClientData?.clientName}
+        clientAddress={mapClientData?.clientAddress}
+        clientPhone={mapClientData?.clientPhone}
+      />
     </div>
   );
 }
