@@ -1,7 +1,7 @@
 import * as XLSX from "xlsx";
 import { saveAs } from "file-saver";
 import jsPDF from "jspdf";
-import "jspdf-autotable";
+import autoTable from "jspdf-autotable";
 
 // Utility to format currency
 const formatCurrency = (amount) => {
