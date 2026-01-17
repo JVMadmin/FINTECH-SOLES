@@ -48,9 +48,11 @@ import {
   Navigation,
   CalendarDays,
   CalendarRange,
+  Printer,
 } from "lucide-react";
 import { toast } from "sonner";
 import MapModal from "@/components/MapModal";
+import PaymentTicket from "@/components/PaymentTicket";
 
 const API = `${process.env.REACT_APP_BACKEND_URL}/api`;
 
