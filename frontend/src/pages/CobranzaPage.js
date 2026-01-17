@@ -83,6 +83,10 @@ export default function CobranzaPage() {
   const [promiseDate, setPromiseDate] = useState("");
   const [showNoPaymentConfirm, setShowNoPaymentConfirm] = useState(false);
   
+  // Map Modal states
+  const [showMapModal, setShowMapModal] = useState(false);
+  const [mapClientData, setMapClientData] = useState(null);
+  
   const fileInputRef = useRef(null);
 
   useEffect(() => {
