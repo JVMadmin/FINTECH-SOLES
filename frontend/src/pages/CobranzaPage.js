@@ -50,6 +50,7 @@ import {
   CalendarRange,
 } from "lucide-react";
 import { toast } from "sonner";
+import MapModal from "@/components/MapModal";
 
 const API = `${process.env.REACT_APP_BACKEND_URL}/api`;
 
