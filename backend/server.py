@@ -1212,6 +1212,7 @@ async def get_payments(
     fecha_fin: Optional[str] = None,
     credito_id: Optional[str] = None,
     region: Optional[str] = None,
+    asesor_id: Optional[str] = None,
     user: dict = Depends(get_current_user)
 ):
     query = {}
@@ -1227,7 +1228,20 @@ async def get_payments(
     if credito_id:
         query["credito_id"] = credito_id
     
-    payments = await db.payments.find(query, {"_id": 0}).to_list(1000)
+    if asesor_id:
+        query["registrado_por"] = asesor_id
+    
+    # Filtro por fecha
+    if fecha_inicio or fecha_fin:
+        fecha_query = {}
+        if fecha_inicio:
+            fecha_query["$gte"] = fecha_inicio
+        if fecha_fin:
+            fecha_query["$lte"] = fecha_fin + "T23:59:59"
+        if fecha_query:
+            query["fecha_pago"] = fecha_query
+    
+    payments = await db.payments.find(query, {"_id": 0}).sort("fecha_pago", -1).to_list(1000)
     return [PaymentResponse(**p) for p in payments]
 
 # ============== NO PAYMENT (INCIDENCIAS) ROUTES ==============
