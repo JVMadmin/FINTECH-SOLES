@@ -873,6 +873,147 @@ async def update_client(client_id: str, data: dict, user: dict = Depends(get_cur
     
     return {"message": "Cliente actualizado"}
 
+@api_router.get("/clients/{client_id}/score")
+async def get_client_score(client_id: str, user: dict = Depends(get_current_user)):
+    """Calcular score interno del cliente basado en historial de pagos"""
+    check_role(user, ["desarrollador", "administrador", "gerente_regional", "supervisor", "asesor"])
+    
+    client = await db.clients.find_one({"id": client_id}, {"_id": 0})
+    if not client:
+        raise HTTPException(status_code=404, detail="Cliente no encontrado")
+    
+    # Obtener todos los créditos del cliente
+    credits = await db.credits.find({"cliente_id": client_id}, {"_id": 0}).to_list(100)
+    
+    # Obtener todos los pagos del cliente
+    payments = await db.payments.find({"cliente_id": client_id}, {"_id": 0}).to_list(1000)
+    
+    # Obtener incidencias de no pago
+    no_payments = await db.no_payments.find({"cliente_id": client_id}, {"_id": 0}).to_list(100)
+    
+    # Calcular métricas
+    total_creditos = len(credits)
+    creditos_liquidados = len([c for c in credits if c.get("estatus") == "liquidado"])
+    creditos_vigentes = len([c for c in credits if c.get("estatus") in ["vigente", "atrasado"]])
+    creditos_vencidos = len([c for c in credits if c.get("estatus") == "vencido"])
+    
+    total_pagos = len(payments)
+    total_incidencias = len(no_payments)
+    
+    # Calcular pagos a tiempo vs atrasados
+    pagos_a_tiempo = 0
+    pagos_atrasados = 0
+    total_dias_atraso = 0
+    
+    for credit in credits:
+        calendario = credit.get("calendario_pagos", [])
+        for pago in calendario:
+            if pago.get("pagado"):
+                fecha_programada = pago.get("fecha")
+                fecha_pago = pago.get("fecha_pago_real")
+                if fecha_programada and fecha_pago:
+                    if fecha_pago <= fecha_programada:
+                        pagos_a_tiempo += 1
+                    else:
+                        pagos_atrasados += 1
+                        # Calcular días de atraso
+                        try:
+                            prog = datetime.fromisoformat(fecha_programada.replace("Z", "+00:00"))
+                            real = datetime.fromisoformat(fecha_pago.replace("Z", "+00:00"))
+                            dias = (real - prog).days
+                            total_dias_atraso += max(0, dias)
+                        except:
+                            pass
+    
+    # Calcular score (0-100)
+    score = 100
+    
+    # Factor 1: Historial de créditos (-20 si tiene vencidos)
+    if creditos_vencidos > 0:
+        score -= 20 * creditos_vencidos
+    
+    # Factor 2: Créditos liquidados exitosamente (+5 por cada uno, max +20)
+    score += min(20, creditos_liquidados * 5)
+    
+    # Factor 3: Porcentaje de pagos a tiempo
+    total_pagos_calendario = pagos_a_tiempo + pagos_atrasados
+    if total_pagos_calendario > 0:
+        porcentaje_a_tiempo = (pagos_a_tiempo / total_pagos_calendario) * 100
+        if porcentaje_a_tiempo < 50:
+            score -= 30
+        elif porcentaje_a_tiempo < 70:
+            score -= 15
+        elif porcentaje_a_tiempo < 85:
+            score -= 5
+    
+    # Factor 4: Incidencias de no pago (-5 por cada una)
+    score -= min(25, total_incidencias * 5)
+    
+    # Factor 5: Promedio de días de atraso
+    if total_pagos_calendario > 0:
+        promedio_atraso = total_dias_atraso / total_pagos_calendario
+        if promedio_atraso > 7:
+            score -= 15
+        elif promedio_atraso > 3:
+            score -= 8
+        elif promedio_atraso > 1:
+            score -= 3
+    
+    # Limitar score entre 0 y 100
+    score = max(0, min(100, score))
+    
+    # Determinar categoría
+    if score >= 85:
+        categoria = "EXCELENTE"
+        color = "green"
+        recomendacion = "Cliente confiable. Apto para renovación inmediata."
+    elif score >= 70:
+        categoria = "BUENO"
+        color = "blue"
+        recomendacion = "Buen historial. Puede acceder a créditos estándar."
+    elif score >= 50:
+        categoria = "REGULAR"
+        color = "yellow"
+        recomendacion = "Historial con algunas incidencias. Evaluar con precaución."
+    elif score >= 30:
+        categoria = "BAJO"
+        color = "orange"
+        recomendacion = "Historial problemático. Requiere garantías adicionales."
+    else:
+        categoria = "CRÍTICO"
+        color = "red"
+        recomendacion = "Alto riesgo. No recomendado para nuevos créditos."
+    
+    # Actualizar score en el cliente
+    await db.clients.update_one(
+        {"id": client_id},
+        {"$set": {
+            "score": score,
+            "score_categoria": categoria,
+            "score_updated_at": datetime.now(timezone.utc).isoformat()
+        }}
+    )
+    
+    return {
+        "cliente_id": client_id,
+        "cliente_nombre": client.get("nombre_completo"),
+        "score": round(score),
+        "categoria": categoria,
+        "color": color,
+        "recomendacion": recomendacion,
+        "metricas": {
+            "total_creditos": total_creditos,
+            "creditos_liquidados": creditos_liquidados,
+            "creditos_vigentes": creditos_vigentes,
+            "creditos_vencidos": creditos_vencidos,
+            "total_pagos": total_pagos,
+            "pagos_a_tiempo": pagos_a_tiempo,
+            "pagos_atrasados": pagos_atrasados,
+            "total_incidencias": total_incidencias,
+            "promedio_dias_atraso": round(total_dias_atraso / max(1, total_pagos_calendario), 1)
+        }
+    }
+
 # ============== CARTERA (PORTFOLIO) ROUTES ==============
 @api_router.post("/cartera/assign")
 async def assign_cartera(data: AssignCarteraRequest, user: dict = Depends(get_current_user)):
